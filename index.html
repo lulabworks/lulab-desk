@@ -2,7 +2,23 @@
 <html lang="it">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta id="app-viewport" name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <script>
+      ;(() => {
+        const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
+          || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+          || navigator.standalone === true
+
+        if (!isIOS || !isStandalone) return
+
+        document.documentElement.classList.add('ios-standalone')
+        document.getElementById('app-viewport')?.setAttribute(
+          'content',
+          'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
+        )
+      })()
+    </script>
     <meta name="theme-color" content="#1f4938" />
     <meta name="description" content="LuLab Desk — il gestionale quotidiano del laboratorio LuLab" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
