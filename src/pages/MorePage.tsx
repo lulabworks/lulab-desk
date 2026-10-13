@@ -1,6 +1,5 @@
-import { Armchair, ArrowRight, BarChart3, Boxes, DatabaseBackup, Download, Settings, ShieldCheck } from 'lucide-react'
+import { DatabaseBackup, Download, Settings } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { Button, Field, Input, Notice, PageHeader, Panel } from '../components/ui'
 import { readableError, supabase } from '../lib/supabase'
 import { isPhase3Unavailable } from '../lib/phase3'
@@ -58,7 +57,7 @@ export function MorePage() {
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
       anchor.href = url
-      anchor.download = `lulab-desk-backup-${new Date().toISOString().slice(0, 10)}.json`
+      anchor.download = `lulab-desk-export-${new Date().toISOString().slice(0, 10)}.json`
       anchor.click()
       URL.revokeObjectURL(url)
       setMessage({ tone: 'success', text: 'Esportazione completata.' })
@@ -66,31 +65,23 @@ export function MorePage() {
     setExporting(false)
   }
 
-  const modules = [
-    { icon: Boxes, title: 'Materiali e magazzino', to: '/materiali', description: 'Catalogo, giacenze, fornitori e movimenti.' },
-    { icon: Armchair, title: 'Recuperi e rivendita', to: '/recuperi', description: 'Mobili recuperati, costi, lavorazioni e vendite.' },
-    { icon: ShieldCheck, title: 'Trattamenti antitarlo', to: '/antitarlo', description: 'Collaboratori, ritiri, rientri e margini.' },
-    { icon: BarChart3, title: 'Statistiche', to: '/statistiche', description: 'Analisi economica e andamento mensile.' }
-  ]
-
   return (
     <div>
-      <PageHeader eyebrow="Strumenti" title="Altro" description="Impostazioni, backup e strumenti per la gestione completa del laboratorio." />
+      <PageHeader eyebrow="Configurazione" title="Impostazioni" description="Gestisci le preferenze generali e l’esportazione dei dati di LuLab Desk." />
       {message && <div className="mb-5"><Notice tone={message.tone}>{message.text}</Notice></div>}
       <div className="grid gap-6 xl:grid-cols-2">
         <Panel>
-          <div className="flex items-center gap-3"><div className="grid size-11 place-items-center rounded-2xl bg-brand-soft text-brand"><Settings size={21} /></div><div><p className="section-kicker">Configurazione</p><h2 className="type-panel-title">Tariffa oraria</h2></div></div>
+          <div className="flex items-center gap-3"><div className="grid size-11 place-items-center rounded-2xl bg-brand-soft text-brand"><Settings size={21} /></div><div><p className="section-kicker">Configurazione</p><h2 className="type-panel-title">Tariffe e costi</h2></div></div>
           <p className="mt-4 text-sm leading-6 text-muted">È usata nei preventivi, nel cronometro e per distinguere le spese vive dal valore del tempo lavorato.</p>
-          <div className="mt-5 max-w-xs"><Field label="Tariffa predefinita (€ / ora)"><Input type="number" min="0" step="0.5" value={hourlyRate} onChange={(e) => setHourlyRate(Number(e.target.value))} /></Field></div>
-          <Button className="mt-4" onClick={saveSettings} loading={saving}>Salva impostazioni</Button>
+          <div className="mt-5 max-w-xs"><Field label="Tariffa oraria predefinita (€ / ora)"><Input type="number" min="0" step="0.5" value={hourlyRate} onChange={(e) => setHourlyRate(Number(e.target.value))} /></Field></div>
+          <Button className="mt-4" onClick={saveSettings} loading={saving}>Salva tariffa</Button>
         </Panel>
         <Panel>
-          <div className="flex items-center gap-3"><div className="grid size-11 place-items-center rounded-2xl bg-blue-100 text-blue-800"><DatabaseBackup size={21} /></div><div><p className="section-kicker">Portabilità</p><h2 className="type-panel-title">Esporta i dati</h2></div></div>
-          <p className="mt-4 text-sm leading-6 text-muted">Scarica in JSON i dati delle Fasi 1, 2 e 3. I file binari nello Storage non sono inclusi: l’esportazione contiene i relativi metadati.</p>
+          <div className="flex items-center gap-3"><div className="grid size-11 place-items-center rounded-2xl bg-blue-100 text-blue-800"><DatabaseBackup size={21} /></div><div><p className="section-kicker">Portabilità</p><h2 className="type-panel-title">Dati ed esportazione</h2></div></div>
+          <p className="mt-4 text-sm leading-6 text-muted">Scarica in formato JSON i dati e i metadati registrati nel gestionale. Fotografie, allegati e altri file binari non sono inclusi: questa esportazione non costituisce un backup completo.</p>
           <Button className="mt-5" variant="secondary" onClick={exportData} loading={exporting}><Download size={17} /> Esporta JSON</Button>
         </Panel>
       </div>
-      <section className="mt-7"><p className="section-kicker">Gestione laboratorio</p><h2 className="type-panel-title">Moduli Fase 3</h2><div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">{modules.map(({ icon: Icon, title, to, description }) => <Link key={title} to={to}><Panel className="h-full transition hover:-translate-y-0.5 hover:shadow-md"><div className="flex items-start justify-between gap-3"><div className="grid size-10 place-items-center rounded-xl bg-brand-soft text-brand"><Icon size={19} /></div><ArrowRight size={18} className="text-stone-300" /></div><h3 className="mt-4 type-card-title">{title}</h3><p className="mt-2 text-xs leading-5 text-muted">{description}</p></Panel></Link>)}</div></section>
     </div>
   )
 }

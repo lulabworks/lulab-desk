@@ -1,7 +1,108 @@
 import { LoaderCircle, X } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion, type HTMLMotionProps } from 'motion/react'
-import { useEffect, useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { useEffect, useId, useRef, useState, type InputHTMLAttributes, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { createPortal } from 'react-dom'
 import { sheetSpring, tapSpring } from '../lib/animations'
+
+type ModalViewport = { top: number; left: number; width: number; height: number }
+
+type ModalLockSnapshot = {
+  scrollY: number
+  restoreFocus: HTMLElement | null
+  bodyOverflow: string
+  bodyPosition: string
+  bodyTop: string
+  bodyLeft: string
+  bodyRight: string
+  bodyWidth: string
+  bodyPaddingRight: string
+  htmlOverflow: string
+  rootAriaHidden: string | null
+  rootWasInert: boolean
+}
+
+let activeModalLocks = 0
+let modalLockSnapshot: ModalLockSnapshot | null = null
+let restoreFocusFrame = 0
+
+function readModalViewport(): ModalViewport {
+  if (typeof window === 'undefined') return { top: 0, left: 0, width: 0, height: 0 }
+  const viewport = window.visualViewport
+  return {
+    top: viewport?.offsetTop ?? 0,
+    left: viewport?.offsetLeft ?? 0,
+    width: viewport?.width ?? window.innerWidth,
+    height: viewport?.height ?? window.innerHeight
+  }
+}
+
+function lockPageForModal(restoreFocus: HTMLElement | null) {
+  if (restoreFocusFrame) cancelAnimationFrame(restoreFocusFrame)
+  if (activeModalLocks === 0) {
+    const { body, documentElement } = document
+    const appRoot = document.getElementById('root')
+    const scrollY = window.scrollY
+    modalLockSnapshot = {
+      scrollY,
+      restoreFocus,
+      bodyOverflow: body.style.overflow,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyLeft: body.style.left,
+      bodyRight: body.style.right,
+      bodyWidth: body.style.width,
+      bodyPaddingRight: body.style.paddingRight,
+      htmlOverflow: documentElement.style.overflow,
+      rootAriaHidden: appRoot?.getAttribute('aria-hidden') ?? null,
+      rootWasInert: appRoot?.hasAttribute('inert') ?? false
+    }
+
+    const scrollbarWidth = Math.max(0, window.innerWidth - documentElement.clientWidth)
+    documentElement.style.overflow = 'hidden'
+    body.style.overflow = 'hidden'
+    body.style.position = 'fixed'
+    body.style.top = `-${scrollY}px`
+    body.style.left = '0'
+    body.style.right = '0'
+    body.style.width = '100%'
+    if (scrollbarWidth > 0) body.style.paddingRight = `${scrollbarWidth}px`
+    appRoot?.setAttribute('aria-hidden', 'true')
+    appRoot?.setAttribute('inert', '')
+  }
+  activeModalLocks += 1
+}
+
+function unlockPageForModal() {
+  activeModalLocks = Math.max(0, activeModalLocks - 1)
+  if (activeModalLocks > 0 || !modalLockSnapshot) return
+
+  const snapshot = modalLockSnapshot
+  const { body, documentElement } = document
+  const appRoot = document.getElementById('root')
+  body.style.overflow = snapshot.bodyOverflow
+  body.style.position = snapshot.bodyPosition
+  body.style.top = snapshot.bodyTop
+  body.style.left = snapshot.bodyLeft
+  body.style.right = snapshot.bodyRight
+  body.style.width = snapshot.bodyWidth
+  body.style.paddingRight = snapshot.bodyPaddingRight
+  documentElement.style.overflow = snapshot.htmlOverflow
+  if (snapshot.rootAriaHidden === null) appRoot?.removeAttribute('aria-hidden')
+  else appRoot?.setAttribute('aria-hidden', snapshot.rootAriaHidden)
+  if (!snapshot.rootWasInert) appRoot?.removeAttribute('inert')
+  window.scrollTo(0, snapshot.scrollY)
+  modalLockSnapshot = null
+
+  restoreFocusFrame = requestAnimationFrame(() => {
+    if (activeModalLocks === 0 && snapshot.restoreFocus?.isConnected) snapshot.restoreFocus.focus({ preventScroll: true })
+    restoreFocusFrame = 0
+  })
+}
+
+function focusableElements(container: HTMLElement) {
+  return Array.from(container.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+    .filter((element) => element.getClientRects().length > 0 && element.getAttribute('aria-hidden') !== 'true')
+}
 
 export function Button({
   className = '',
@@ -85,6 +186,10 @@ export function ModalPresence({ children }: { children: ReactNode }) {
 export function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   const reduceMotion = useReducedMotion()
   const [desktop, setDesktop] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 640px) and (hover: hover)').matches)
+  const [viewport, setViewport] = useState(readModalViewport)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const restoreFocusRef = useRef<HTMLElement | null>(typeof document !== 'undefined' && document.activeElement instanceof HTMLElement ? document.activeElement : null)
+  const titleId = useId()
 
   useEffect(() => {
     const media = window.matchMedia('(min-width: 640px) and (hover: hover)')
@@ -94,16 +199,87 @@ export function Modal({ title, children, onClose }: { title: string; children: R
     return () => media.removeEventListener('change', update)
   }, [])
 
+  useEffect(() => {
+    const visualViewport = window.visualViewport
+    const update = () => setViewport(readModalViewport())
+    const updateAndRevealFocus = () => {
+      update()
+      requestAnimationFrame(() => {
+        const activeElement = document.activeElement
+        if (activeElement instanceof HTMLElement && dialogRef.current?.contains(activeElement)) {
+          activeElement.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+        }
+      })
+    }
+    update()
+    window.addEventListener('resize', updateAndRevealFocus)
+    visualViewport?.addEventListener('resize', updateAndRevealFocus)
+    visualViewport?.addEventListener('scroll', update)
+    return () => {
+      window.removeEventListener('resize', updateAndRevealFocus)
+      visualViewport?.removeEventListener('resize', updateAndRevealFocus)
+      visualViewport?.removeEventListener('scroll', update)
+    }
+  }, [])
+
+  useEffect(() => {
+    lockPageForModal(restoreFocusRef.current)
+    const focusFrame = requestAnimationFrame(() => {
+      const dialog = dialogRef.current
+      if (!dialog || dialog.contains(document.activeElement)) return
+      const requestedFocus = dialog.querySelector<HTMLElement>('[autofocus]')
+      const focusTarget = requestedFocus ?? focusableElements(dialog)[0] ?? dialog
+      focusTarget.focus({ preventScroll: true })
+    })
+    return () => {
+      cancelAnimationFrame(focusFrame)
+      unlockPageForModal()
+    }
+  }, [])
+
+  function handleKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      event.stopPropagation()
+      onClose()
+      return
+    }
+    if (event.key !== 'Tab' || !dialogRef.current) return
+
+    const focusable = focusableElements(dialogRef.current)
+    if (focusable.length === 0) {
+      event.preventDefault()
+      dialogRef.current.focus({ preventScroll: true })
+      return
+    }
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (event.shiftKey && (document.activeElement === first || !dialogRef.current.contains(document.activeElement))) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first.focus()
+    }
+  }
+
   const panelInitial = reduceMotion ? { opacity: 0 } : desktop ? { opacity: 0, y: 12, scale: 0.985 } : { opacity: 0, y: '105%' }
   const panelAnimate = reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }
   const panelExit = reduceMotion ? { opacity: 0 } : desktop ? { opacity: 0, y: 8, scale: 0.99 } : { opacity: 0, y: '105%' }
 
-  return (
-    <motion.div className={`fixed inset-0 z-50 flex justify-center ${desktop ? 'items-center p-6' : 'items-end p-0'}`} role="dialog" aria-modal="true" aria-label={title}>
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
+    <motion.div
+      className={`fixed z-50 flex justify-center ${desktop ? 'items-center p-6' : 'items-end pt-[max(.75rem,env(safe-area-inset-top))]'}`}
+      style={{ top: viewport.top, left: viewport.left, width: viewport.width, height: viewport.height }}
+      data-modal-viewport="visual"
+    >
       <motion.button
         type="button"
         className="absolute inset-0 size-full cursor-default bg-ink/45 backdrop-blur-[2px]"
-        aria-label="Chiudi finestra"
+        aria-hidden="true"
+        tabIndex={-1}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -111,21 +287,30 @@ export function Modal({ title, children, onClose }: { title: string; children: R
         onClick={onClose}
       />
       <motion.div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        onKeyDown={handleKeyDown}
         initial={panelInitial}
         animate={panelAnimate}
         exit={panelExit}
         transition={reduceMotion ? { duration: 0.1 } : sheetSpring}
-        className={`relative max-h-[92dvh] w-full overflow-y-auto overscroll-contain bg-canvas shadow-2xl ${desktop ? 'max-w-xl rounded-3xl p-7' : 'rounded-t-3xl px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5'}`}
+        className={`relative z-10 flex max-h-full w-full flex-col overflow-hidden bg-canvas shadow-2xl outline-none ${desktop ? 'max-w-xl rounded-3xl' : 'rounded-t-3xl'}`}
       >
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <h2 className="type-panel-title text-ink">{title}</h2>
-          <motion.button whileTap={reduceMotion ? undefined : { scale: 0.94 }} transition={tapSpring} className="grid size-10 place-items-center rounded-full text-muted hover:bg-stone-200" onClick={onClose} aria-label="Chiudi">
+        <div className={`z-10 flex shrink-0 items-center justify-between gap-4 bg-canvas ${desktop ? 'px-7 pb-5 pt-7' : 'px-5 pb-5 pt-5'}`}>
+          <h2 id={titleId} className="type-panel-title text-ink">{title}</h2>
+          <motion.button type="button" whileTap={reduceMotion ? undefined : { scale: 0.94 }} transition={tapSpring} className="grid size-10 shrink-0 place-items-center rounded-full text-muted hover:bg-stone-200" onClick={onClose} aria-label="Chiudi">
             <X size={20} />
           </motion.button>
         </div>
-        {children}
+        <div className={`min-h-0 overflow-y-auto overscroll-contain touch-pan-y ${desktop ? 'px-7 pb-7' : 'px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]'}`} data-modal-scroll-region>
+          {children}
+        </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   )
 }
 
