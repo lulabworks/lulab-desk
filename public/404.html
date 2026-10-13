@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>LuLab Desk</title>
+  </head>
+  <body>
+    <script>
+      ;(() => {
+        const base = '/lulab-desk/'
+        const requestedRoute = `${window.location.pathname}${window.location.search}${window.location.hash}`
+        const target = requestedRoute.startsWith(base)
+          ? `${base}?__spa=${encodeURIComponent(requestedRoute)}`
+          : base
+        window.location.replace(target)
+      })()
+    </script>
+    <noscript>Per usare LuLab Desk è necessario abilitare JavaScript.</noscript>
+  </body>
+</html>
