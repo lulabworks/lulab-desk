@@ -1,5 +1,7 @@
 import { LoaderCircle, X } from 'lucide-react'
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react'
+import { AnimatePresence, motion, useReducedMotion, type HTMLMotionProps } from 'motion/react'
+import { useEffect, useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { sheetSpring, tapSpring } from '../lib/animations'
 
 export function Button({
   className = '',
@@ -8,10 +10,12 @@ export function Button({
   children,
   disabled,
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & {
+}: Omit<HTMLMotionProps<'button'>, 'children'> & {
+  children?: ReactNode
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
   loading?: boolean
 }) {
+  const reduceMotion = useReducedMotion()
   const tones = {
     primary: 'bg-brand text-white hover:bg-brand-dark shadow-sm',
     secondary: 'bg-white text-ink border border-line hover:bg-stone-50',
@@ -19,14 +23,16 @@ export function Button({
     danger: 'bg-red-600 text-white hover:bg-red-700'
   }
   return (
-    <button
-      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-55 ${tones[variant]} ${className}`}
+    <motion.button
+      whileTap={reduceMotion || disabled || loading ? undefined : { scale: 0.98 }}
+      transition={tapSpring}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[15px] font-semibold leading-5 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-55 ${tones[variant]} ${className}`}
       disabled={disabled || loading}
       {...props}
     >
       {loading && <LoaderCircle size={17} className="animate-spin" />}
       {children}
-    </button>
+    </motion.button>
   )
 }
 
@@ -56,15 +62,15 @@ export function Textarea({ className = '', ...props }: TextareaHTMLAttributes<HT
 }
 
 export function Panel({ className = '', children }: { className?: string; children: ReactNode }) {
-  return <section className={`rounded-2xl border border-line bg-white p-5 shadow-card ${className}`}>{children}</section>
+  return <section className={`min-w-0 max-w-full rounded-2xl border border-line bg-white p-5 shadow-card ${className}`}>{children}</section>
 }
 
 export function PageHeader({ eyebrow, title, description, action }: { eyebrow?: string; title: string; description?: string; action?: ReactNode }) {
   return (
     <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        {eyebrow && <p className="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-brand">{eyebrow}</p>}
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{title}</h1>
+        {eyebrow && <p className="section-kicker">{eyebrow}</p>}
+        <h1 className="type-page-title text-ink">{title}</h1>
         {description && <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{description}</p>}
       </div>
       {action}
@@ -72,19 +78,54 @@ export function PageHeader({ eyebrow, title, description, action }: { eyebrow?: 
   )
 }
 
+export function ModalPresence({ children }: { children: ReactNode }) {
+  return <AnimatePresence>{children}</AnimatePresence>
+}
+
 export function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
+  const reduceMotion = useReducedMotion()
+  const [desktop, setDesktop] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 640px) and (hover: hover)').matches)
+
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 640px) and (hover: hover)')
+    const update = () => setDesktop(media.matches)
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  const panelInitial = reduceMotion ? { opacity: 0 } : desktop ? { opacity: 0, y: 12, scale: 0.985 } : { opacity: 0, y: '105%' }
+  const panelAnimate = reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }
+  const panelExit = reduceMotion ? { opacity: 0 } : desktop ? { opacity: 0, y: 8, scale: 0.99 } : { opacity: 0, y: '105%' }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/45 p-0 backdrop-blur-[2px] sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-t-3xl bg-canvas p-5 shadow-2xl sm:max-w-xl sm:rounded-3xl sm:p-7">
+    <motion.div className={`fixed inset-0 z-50 flex justify-center ${desktop ? 'items-center p-6' : 'items-end p-0'}`} role="dialog" aria-modal="true" aria-label={title}>
+      <motion.button
+        type="button"
+        className="absolute inset-0 size-full cursor-default bg-ink/45 backdrop-blur-[2px]"
+        aria-label="Chiudi finestra"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: reduceMotion ? 0.08 : 0.18 }}
+        onClick={onClose}
+      />
+      <motion.div
+        initial={panelInitial}
+        animate={panelAnimate}
+        exit={panelExit}
+        transition={reduceMotion ? { duration: 0.1 } : sheetSpring}
+        className={`relative max-h-[92dvh] w-full overflow-y-auto overscroll-contain bg-canvas shadow-2xl ${desktop ? 'max-w-xl rounded-3xl p-7' : 'rounded-t-3xl px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5'}`}
+      >
         <div className="mb-5 flex items-center justify-between gap-4">
-          <h2 className="font-display text-2xl font-semibold text-ink">{title}</h2>
-          <button className="grid size-10 place-items-center rounded-full text-muted hover:bg-stone-200" onClick={onClose} aria-label="Chiudi">
+          <h2 className="type-panel-title text-ink">{title}</h2>
+          <motion.button whileTap={reduceMotion ? undefined : { scale: 0.94 }} transition={tapSpring} className="grid size-10 place-items-center rounded-full text-muted hover:bg-stone-200" onClick={onClose} aria-label="Chiudi">
             <X size={20} />
-          </button>
+          </motion.button>
         </div>
         {children}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
 
@@ -93,7 +134,7 @@ export function EmptyState({ icon, title, description, action }: { icon: ReactNo
     <div className="grid min-h-60 place-items-center rounded-2xl border border-dashed border-stone-300 bg-white/60 px-6 py-10 text-center">
       <div>
         <div className="mx-auto mb-4 grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand">{icon}</div>
-        <h3 className="font-display text-xl font-semibold text-ink">{title}</h3>
+        <h3 className="type-card-title text-ink">{title}</h3>
         <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">{description}</p>
         {action && <div className="mt-5">{action}</div>}
       </div>

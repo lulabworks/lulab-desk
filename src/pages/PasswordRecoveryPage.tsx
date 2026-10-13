@@ -49,20 +49,20 @@ export function PasswordRecoveryPage() {
       <div className="w-full max-w-md">
         <div className="mb-8 flex items-center gap-3">
           <BrandLogo className="size-12 rounded-2xl shadow-sm ring-1 ring-black/5" />
-          <div><p className="font-display text-xl font-semibold">{BRAND.appName}</p><p className="text-xs text-muted">Accesso privato</p></div>
+          <div><p className="type-card-title">{BRAND.appName}</p><p className="text-xs text-muted">Accesso privato</p></div>
         </div>
         <Panel className="p-6 sm:p-8">
           {success ? (
             <div className="text-center">
               <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-800"><CheckCircle2 size={25} /></div>
-              <h1 className="mt-5 font-display text-3xl font-semibold">Password aggiornata</h1>
+              <h1 className="mt-5 type-page-title">Password aggiornata</h1>
               <p className="mt-3 text-sm leading-6 text-muted">La nuova password è attiva. Puoi tornare alla tua dashboard.</p>
               <Button className="mt-6 w-full" onClick={continueToApp}>Continua in {BRAND.appName}</Button>
             </div>
           ) : (
             <>
               <div className="grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand"><LockKeyhole size={23} /></div>
-              <h1 className="mt-5 font-display text-3xl font-semibold">Scegli una nuova password</h1>
+              <h1 className="mt-5 type-page-title">Scegli una nuova password</h1>
               <p className="mt-3 text-sm leading-6 text-muted">Imposta una password di almeno 8 caratteri per il tuo account {BRAND.name}.</p>
               {!user ? (
                 <div className="mt-6 grid gap-4">

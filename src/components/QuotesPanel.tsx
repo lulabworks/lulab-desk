@@ -48,12 +48,12 @@ export function QuotesPanel({ job }: { job: Job }) {
   return (
     <Panel>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div><p className="section-kicker">Offerte</p><h2 className="font-display text-2xl font-semibold">Preventivi</h2></div>
+        <div><p className="section-kicker">Offerte</p><h2 className="type-panel-title">Preventivi</h2></div>
         {!unavailable && <Button onClick={createQuote} loading={creating}><Plus size={17} /> Nuovo preventivo</Button>}
       </div>
       {unavailable ? <Notice>Applica la migrazione <strong>002_phase2_operations.sql</strong> per attivare i preventivi.</Notice> : error ? <Notice tone="error">{error}</Notice> : !loading && quotes.length === 0 ? <EmptyState icon={<FileText size={22} />} title="Nessun preventivo" description="Crea un preventivo modificabile con materiali, manodopera, spese e margine." action={<Button onClick={createQuote}><Plus size={17} /> Crea preventivo</Button>} /> : <div className="grid gap-2">{quotes.map((quote) => {
         const status = QUOTE_STATUSES.find((item) => item.value === quote.status) ?? QUOTE_STATUSES[0]
-        return <button key={quote.id} onClick={() => navigate(`/lavori/${job.id}/preventivi/${quote.id}`)} className="flex w-full items-center gap-3 rounded-xl border border-line p-3.5 text-left transition hover:border-brand/30 hover:bg-brand-soft/40"><div className="grid size-10 shrink-0 place-items-center rounded-xl bg-stone-100 text-brand"><FileText size={19} /></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><span className="truncate text-sm font-semibold">{quote.title}</span><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${status.tone}`}>{status.label}</span></div><p className="mt-1 text-xs text-muted">{quote.code} · {formatDate(quote.quote_date)}</p></div><p className="font-display text-lg font-semibold text-brand">{money.format(Number(quote.total))}</p></button>
+        return <button key={quote.id} onClick={() => navigate(`/lavori/${job.id}/preventivi/${quote.id}`)} className="flex min-w-0 max-w-full flex-wrap items-center gap-3 rounded-xl border border-line p-3.5 text-left transition hover:border-brand/30 hover:bg-brand-soft/40 sm:flex-nowrap"><div className="grid size-10 shrink-0 place-items-center rounded-xl bg-stone-100 text-brand"><FileText size={19} /></div><div className="min-w-0 flex-1"><div className="flex min-w-0 flex-wrap items-center gap-2"><span className="min-w-0 max-w-full truncate text-sm font-semibold">{quote.title}</span><span className={`shrink-0 rounded-full px-2 py-0.5 text-[13px] font-medium ${status.tone}`}>{status.label}</span></div><p className="mt-1 truncate text-xs text-muted">{quote.code} · {formatDate(quote.quote_date)}</p></div><p className="ml-auto shrink-0 type-card-title type-amount text-brand">{money.format(Number(quote.total))}</p></button>
       })}</div>}
     </Panel>
   )

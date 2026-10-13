@@ -79,18 +79,18 @@ export function MorePage() {
       {message && <div className="mb-5"><Notice tone={message.tone}>{message.text}</Notice></div>}
       <div className="grid gap-6 xl:grid-cols-2">
         <Panel>
-          <div className="flex items-center gap-3"><div className="grid size-11 place-items-center rounded-2xl bg-brand-soft text-brand"><Settings size={21} /></div><div><p className="section-kicker">Configurazione</p><h2 className="font-display text-2xl font-semibold">Tariffa oraria</h2></div></div>
+          <div className="flex items-center gap-3"><div className="grid size-11 place-items-center rounded-2xl bg-brand-soft text-brand"><Settings size={21} /></div><div><p className="section-kicker">Configurazione</p><h2 className="type-panel-title">Tariffa oraria</h2></div></div>
           <p className="mt-4 text-sm leading-6 text-muted">È usata nei preventivi, nel cronometro e per distinguere le spese vive dal valore del tempo lavorato.</p>
           <div className="mt-5 max-w-xs"><Field label="Tariffa predefinita (€ / ora)"><Input type="number" min="0" step="0.5" value={hourlyRate} onChange={(e) => setHourlyRate(Number(e.target.value))} /></Field></div>
           <Button className="mt-4" onClick={saveSettings} loading={saving}>Salva impostazioni</Button>
         </Panel>
         <Panel>
-          <div className="flex items-center gap-3"><div className="grid size-11 place-items-center rounded-2xl bg-blue-100 text-blue-800"><DatabaseBackup size={21} /></div><div><p className="section-kicker">Portabilità</p><h2 className="font-display text-2xl font-semibold">Esporta i dati</h2></div></div>
+          <div className="flex items-center gap-3"><div className="grid size-11 place-items-center rounded-2xl bg-blue-100 text-blue-800"><DatabaseBackup size={21} /></div><div><p className="section-kicker">Portabilità</p><h2 className="type-panel-title">Esporta i dati</h2></div></div>
           <p className="mt-4 text-sm leading-6 text-muted">Scarica in JSON i dati delle Fasi 1, 2 e 3. I file binari nello Storage non sono inclusi: l’esportazione contiene i relativi metadati.</p>
           <Button className="mt-5" variant="secondary" onClick={exportData} loading={exporting}><Download size={17} /> Esporta JSON</Button>
         </Panel>
       </div>
-      <section className="mt-7"><p className="section-kicker">Gestione laboratorio</p><h2 className="font-display text-2xl font-semibold">Moduli Fase 3</h2><div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">{modules.map(({ icon: Icon, title, to, description }) => <Link key={title} to={to}><Panel className="h-full transition hover:-translate-y-0.5 hover:shadow-md"><div className="flex items-start justify-between gap-3"><div className="grid size-10 place-items-center rounded-xl bg-brand-soft text-brand"><Icon size={19} /></div><ArrowRight size={18} className="text-stone-300" /></div><h3 className="mt-4 font-display text-lg font-semibold">{title}</h3><p className="mt-2 text-xs leading-5 text-muted">{description}</p></Panel></Link>)}</div></section>
+      <section className="mt-7"><p className="section-kicker">Gestione laboratorio</p><h2 className="type-panel-title">Moduli Fase 3</h2><div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">{modules.map(({ icon: Icon, title, to, description }) => <Link key={title} to={to}><Panel className="h-full transition hover:-translate-y-0.5 hover:shadow-md"><div className="flex items-start justify-between gap-3"><div className="grid size-10 place-items-center rounded-xl bg-brand-soft text-brand"><Icon size={19} /></div><ArrowRight size={18} className="text-stone-300" /></div><h3 className="mt-4 type-card-title">{title}</h3><p className="mt-2 text-xs leading-5 text-muted">{description}</p></Panel></Link>)}</div></section>
     </div>
   )
 }

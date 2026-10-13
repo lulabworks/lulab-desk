@@ -82,34 +82,34 @@ export function DashboardPage() {
         {cards.map(({ label, value, icon: Icon, color, to }) => (
           <Link key={label} to={to} className="group rounded-2xl border border-line bg-white p-4 shadow-card transition hover:-translate-y-0.5 hover:shadow-md sm:p-5">
             <div className={`grid size-10 place-items-center rounded-xl ${color}`}><Icon size={19} /></div>
-            <p className="mt-5 font-display text-3xl font-semibold tabular-nums">{loading ? '—' : value}</p>
+            <p className="mt-5 text-3xl type-amount">{loading ? '—' : value}</p>
             <div className="mt-1 flex items-end justify-between gap-2"><p className="text-xs font-semibold leading-5 text-muted sm:text-sm">{label}</p><ArrowRight size={15} className="shrink-0 text-stone-300 transition group-hover:translate-x-0.5 group-hover:text-brand" /></div>
           </Link>
         ))}
       </section>
 
       <Panel className="mt-4 flex items-center justify-between gap-4 overflow-hidden bg-brand text-white">
-        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Da incassare</p><p className="mt-1 font-display text-3xl font-semibold">{loading ? '—' : money.format(metrics.outstanding)}</p><p className="mt-1 text-xs text-white/65">Ricavi concordati meno pagamenti registrati</p></div>
+        <div><p className="type-meta text-accent">Da incassare</p><p className="mt-1 text-3xl type-amount">{loading ? '—' : money.format(metrics.outstanding)}</p><p className="mt-1 text-xs text-white/65">Ricavi concordati meno pagamenti registrati</p></div>
         <CircleDollarSign size={42} className="shrink-0 text-white/25" />
       </Panel>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.35fr_.85fr]">
         <Panel>
-          <div className="mb-4 flex items-center justify-between"><div><p className="section-kicker">Commesse</p><h2 className="font-display text-2xl font-semibold">Aggiornate di recente</h2></div><Link className="text-sm font-semibold text-brand" to="/lavori">Vedi tutte</Link></div>
+          <div className="mb-4 flex items-center justify-between"><div><p className="section-kicker">Commesse</p><h2 className="type-panel-title">Aggiornate di recente</h2></div><Link className="text-sm font-semibold text-brand" to="/lavori">Vedi tutte</Link></div>
           {!loading && jobs.length === 0 ? (
             <EmptyState icon={<Hammer size={22} />} title="Il banco è libero" description="Crea la prima commessa per iniziare a organizzare il lavoro." action={<Link to="/lavori?nuovo=1"><Button><Plus size={17} /> Nuova commessa</Button></Link>} />
           ) : (
             <div className="divide-y divide-line">
               {jobs.map((job) => {
                 const meta = jobStatusMeta(job.status)
-                return <Link key={job.id} to={`/lavori/${job.id}`} className="group flex items-center gap-3 py-4 first:pt-1 last:pb-1"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="truncate font-semibold">{job.title}</p><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${meta.tone}`}>{meta.label}</span></div><p className="mt-1 truncate text-xs text-muted">{job.code} · {jobTypeLabel(job.type)}{job.customer?.display_name ? ` · ${job.customer.display_name}` : ''}</p></div><div className="hidden text-right sm:block"><p className="text-xs font-semibold text-muted">Scadenza</p><p className="mt-0.5 text-sm">{formatDate(job.due_date, 'Non definita')}</p></div><ArrowRight size={17} className="text-stone-300 group-hover:text-brand" /></Link>
+                return <Link key={job.id} to={`/lavori/${job.id}`} className="group flex items-center gap-3 py-4 first:pt-1 last:pb-1"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="truncate font-semibold">{job.title}</p><span className={`rounded-full px-2 py-0.5 text-[13px] font-medium ${meta.tone}`}>{meta.label}</span></div><p className="mt-1 truncate text-xs text-muted">{job.code} · {jobTypeLabel(job.type)}{job.customer?.display_name ? ` · ${job.customer.display_name}` : ''}</p></div><div className="hidden text-right sm:block"><p className="text-xs font-semibold text-muted">Scadenza</p><p className="mt-0.5 text-sm">{formatDate(job.due_date, 'Non definita')}</p></div><ArrowRight size={17} className="text-stone-300 group-hover:text-brand" /></Link>
               })}
             </div>
           )}
         </Panel>
 
         <Panel>
-          <div className="mb-4"><p className="section-kicker">Checklist</p><h2 className="font-display text-2xl font-semibold">Da completare</h2></div>
+          <div className="mb-4"><p className="section-kicker">Checklist</p><h2 className="type-panel-title">Da completare</h2></div>
           {!loading && tasks.length === 0 ? <EmptyState icon={<CheckCircle2 size={22} />} title="Tutto fatto" description="Non ci sono attività aperte nelle commesse." /> : <div className="grid gap-2">{tasks.map((task) => <Link key={task.id} to={`/lavori/${task.job_id}`} className="flex items-start gap-3 rounded-xl bg-stone-50 p-3.5 transition hover:bg-brand-soft"><span className="mt-0.5 size-4 shrink-0 rounded-full border-2 border-stone-300" /><span><span className="block text-sm font-semibold leading-5">{task.title}</span><span className="mt-0.5 block text-xs text-muted">{task.job?.title ?? 'Commessa'}</span></span></Link>)}</div>}
         </Panel>
       </div>

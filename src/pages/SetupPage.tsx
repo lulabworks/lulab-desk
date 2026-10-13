@@ -13,11 +13,11 @@ export function SetupPage() {
       <div className="mx-auto max-w-2xl">
         <div className="mb-8 flex items-center gap-3">
           <BrandLogo className="size-14 rounded-2xl shadow-sm ring-1 ring-black/5" />
-          <div><p className="font-display text-2xl font-semibold">{BRAND.appName}</p><p className="text-sm text-muted">Configurazione iniziale</p></div>
+          <div><p className="type-panel-title">{BRAND.appName}</p><p className="text-sm text-muted">Configurazione iniziale</p></div>
         </div>
         <Panel className="p-6 sm:p-8">
           <div className="grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand"><Database size={24} /></div>
-          <h1 className="mt-5 font-display text-3xl font-semibold tracking-tight">Collega il database</h1>
+          <h1 className="mt-5 type-page-title">Collega il database</h1>
           <p className="mt-3 text-sm leading-6 text-muted">L’app è pronta, ma non sono ancora presenti le credenziali Supabase. Servono per autenticazione e dati persistenti reali.</p>
           <ol className="mt-7 grid gap-5 text-sm leading-6">
             <li className="flex gap-3"><span className="step">1</span><span>Crea un progetto gratuito su <a className="font-semibold text-brand underline underline-offset-4" href="https://supabase.com/dashboard" target="_blank" rel="noreferrer">Supabase <ExternalLink className="inline" size={13} /></a>.</span></li>
