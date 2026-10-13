@@ -65,7 +65,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-line bg-canvas/90 px-4 backdrop-blur lg:hidden">
+      <header className="sticky top-0 z-20 flex h-[calc(4rem+env(safe-area-inset-top))] items-center justify-between border-b border-line bg-canvas/90 px-4 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
         <div className="flex items-center gap-2.5">
           <BrandLogo className="size-10 rounded-xl shadow-sm ring-1 ring-black/5" />
           <span className="font-display text-lg font-semibold">{BRAND.appName}</span>
@@ -77,7 +77,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {drawerOpen && (
         <div className="fixed inset-0 z-50 bg-ink/40 lg:hidden" onClick={() => setDrawerOpen(false)}>
-          <aside className="ml-auto flex h-full w-72 flex-col bg-sidebar p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+          <aside className="ml-auto flex h-full w-72 flex-col bg-sidebar px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] shadow-2xl" onClick={(event) => event.stopPropagation()}>
             <div className="mb-7 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <BrandLogo className="size-10 rounded-xl ring-1 ring-black/5" />
@@ -95,7 +95,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      <main className="mx-auto max-w-[1500px] px-4 pb-28 pt-6 sm:px-7 lg:ml-64 lg:px-10 lg:pb-10 lg:pt-9">{children}</main>
+      <main className="mx-auto min-w-0 max-w-[1500px] px-4 pb-28 pt-6 sm:px-7 lg:ml-64 lg:px-10 lg:pb-10 lg:pt-9">{children}</main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-white/95 px-1 pb-[max(.35rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur lg:hidden">
         {mobileNavigation.map(({ to, label, icon: Icon, end }) => (

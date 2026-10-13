@@ -15,10 +15,16 @@
   --shadow-card: 0 1px 2px rgb(25 35 28 / 0.035), 0 8px 24px rgb(25 35 28 / 0.035);
 }
 
-html { background: var(--color-canvas); color: var(--color-ink); }
+html { background: var(--color-canvas); color: var(--color-ink); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { margin: 0; min-width: 320px; min-height: 100vh; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+#root { min-width: 0; min-height: 100dvh; }
 button, input, select, textarea { font: inherit; }
-button, a { -webkit-tap-highlight-color: transparent; }
+input, select, textarea { max-width: 100%; }
+button, a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+
+@media (hover: none) and (pointer: coarse) {
+  input, select, textarea { font-size: max(1rem, 16px) !important; }
+}
 .section-kicker { margin-bottom: .2rem; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .15em; color: var(--color-brand); }
 .step { display: grid; width: 1.75rem; height: 1.75rem; flex: none; place-items: center; border-radius: .6rem; background: var(--color-brand-soft); color: var(--color-brand); font-weight: 800; }
 ::selection { background: #f4b94266; }

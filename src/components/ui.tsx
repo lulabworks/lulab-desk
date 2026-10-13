@@ -41,7 +41,7 @@ export function Field({ label, hint, error, children }: { label: string; hint?: 
 }
 
 const fieldClass =
-  'min-h-11 w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-[15px] text-ink outline-none transition placeholder:text-stone-400 focus:border-brand focus:ring-3 focus:ring-brand/10'
+  'min-h-11 w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-stone-400 focus:border-brand focus:ring-3 focus:ring-brand/10'
 
 export function Input({ className = '', ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={`${fieldClass} ${className}`} {...props} />
@@ -75,7 +75,7 @@ export function PageHeader({ eyebrow, title, description, action }: { eyebrow?: 
 export function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/45 p-0 backdrop-blur-[2px] sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-canvas p-5 shadow-2xl sm:max-w-xl sm:rounded-3xl sm:p-7">
+      <div className="max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-t-3xl bg-canvas p-5 shadow-2xl sm:max-w-xl sm:rounded-3xl sm:p-7">
         <div className="mb-5 flex items-center justify-between gap-4">
           <h2 className="font-display text-2xl font-semibold text-ink">{title}</h2>
           <button className="grid size-10 place-items-center rounded-full text-muted hover:bg-stone-200" onClick={onClose} aria-label="Chiudi">
