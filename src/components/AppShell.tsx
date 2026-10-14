@@ -1,4 +1,4 @@
-import { Armchair, BarChart3, Boxes, CalendarDays, Hammer, Home, Menu, MoreHorizontal, ShieldCheck, Users, X, LogOut } from 'lucide-react'
+import { Armchair, BarChart3, Boxes, CalendarDays, Globe2, Hammer, Home, Menu, MoreHorizontal, ShieldCheck, Users, X, LogOut } from 'lucide-react'
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'motion/react'
 import { useState, type ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
@@ -16,6 +16,7 @@ const navigation = [
   { to: '/recuperi', label: 'Recuperi', icon: Armchair },
   { to: '/antitarlo', label: 'Antitarlo', icon: ShieldCheck },
   { to: '/statistiche', label: 'Statistiche', icon: BarChart3 },
+  { to: '/sito', label: 'Sito', icon: Globe2 },
   { to: '/altro', label: 'Altro', icon: MoreHorizontal }
 ]
 

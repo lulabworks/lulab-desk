@@ -19,6 +19,8 @@ import { RecoveriesPage } from './pages/RecoveriesPage'
 import { RecoveryDetailPage } from './pages/RecoveryDetailPage'
 import { AntitarloPage } from './pages/AntitarloPage'
 import { StatisticsPage } from './pages/StatisticsPage'
+import { SitePage } from './pages/SitePage'
+import { SiteContentEditorPage } from './pages/SiteContentEditorPage'
 import { BrandLogo } from './components/BrandLogo'
 import { isAppPath } from './lib/appPaths'
 import { routeSpring } from './lib/animations'
@@ -39,7 +41,8 @@ function routePosition(pathname: string) {
     recuperi: 5,
     antitarlo: 6,
     statistiche: 7,
-    altro: 8
+    sito: 8,
+    altro: 9
   }
   return [sectionOrder[section] ?? 9, parts.length] as const
 }
@@ -121,6 +124,9 @@ function AnimatedRoutes() {
             <Route path="/recuperi/:id" element={<RecoveryDetailPage />} />
             <Route path="/antitarlo" element={<AntitarloPage />} />
             <Route path="/statistiche" element={<StatisticsPage />} />
+            <Route path="/sito" element={<SitePage />} />
+            <Route path="/sito/collezione/:id" element={<SiteContentEditorPage />} />
+            <Route path="/sito/progetti/:id" element={<SiteContentEditorPage />} />
             <Route path="/altro" element={<MorePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

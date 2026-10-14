@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Button, Field, Input, Notice, PageHeader, Panel } from '../components/ui'
 import { readableError, supabase } from '../lib/supabase'
 import { isPhase3Unavailable } from '../lib/phase3'
+import { isPublicSiteUnavailable } from '../lib/site'
 
 export function MorePage() {
   const [hourlyRate, setHourlyRate] = useState(35)
@@ -46,13 +47,15 @@ export function MorePage() {
       supabase.from('job_payments').select('*')
     ])
     const phase3 = await Promise.all([supabase.from('material_categories').select('*'), supabase.from('suppliers').select('*'), supabase.from('materials').select('*'), supabase.from('material_movements').select('*'), supabase.from('recovered_items').select('*'), supabase.from('recovered_item_files').select('*'), supabase.from('recovery_time_entries').select('*'), supabase.from('recovery_expenses').select('*'), supabase.from('external_collaborators').select('*'), supabase.from('antitarlo_treatments').select('*')])
+    const site = await Promise.all([supabase.from('site_collection_items').select('*'), supabase.from('site_collection_item_sources').select('*'), supabase.from('site_collection_images').select('*'), supabase.from('site_portfolio_projects').select('*'), supabase.from('site_portfolio_project_sources').select('*'), supabase.from('site_portfolio_images').select('*'), supabase.from('customer_inquiries').select('*'), supabase.from('customer_inquiry_files').select('*')])
     const baseError = customers.error || jobs.error || tasks.error || settings.error || files.error || quotes.error || quoteItems.error || agendaEvents.error || timeEntries.error || expenses.error || payments.error
     const phase3Error = phase3.find((result) => result.error)?.error
-    const firstError = baseError || (phase3Error && !isPhase3Unavailable(phase3Error) ? phase3Error : null)
+    const siteError = site.find((result) => result.error)?.error
+    const firstError = baseError || (phase3Error && !isPhase3Unavailable(phase3Error) ? phase3Error : null) || (siteError && !isPublicSiteUnavailable(siteError) ? siteError : null)
     if (firstError) {
       setMessage({ tone: 'error', text: readableError(firstError) })
     } else {
-      const payload = { exported_at: new Date().toISOString(), customers: customers.data, jobs: jobs.data, job_tasks: tasks.data, user_settings: settings.data, job_files: files.data, quotes: quotes.data, quote_items: quoteItems.data, agenda_events: agendaEvents.data, time_entries: timeEntries.data, job_expenses: expenses.data, job_payments: payments.data, ...(!phase3Error ? { material_categories: phase3[0].data, suppliers: phase3[1].data, materials: phase3[2].data, material_movements: phase3[3].data, recovered_items: phase3[4].data, recovered_item_files: phase3[5].data, recovery_time_entries: phase3[6].data, recovery_expenses: phase3[7].data, external_collaborators: phase3[8].data, antitarlo_treatments: phase3[9].data } : {}) }
+      const payload = { exported_at: new Date().toISOString(), customers: customers.data, jobs: jobs.data, job_tasks: tasks.data, user_settings: settings.data, job_files: files.data, quotes: quotes.data, quote_items: quoteItems.data, agenda_events: agendaEvents.data, time_entries: timeEntries.data, job_expenses: expenses.data, job_payments: payments.data, ...(!phase3Error ? { material_categories: phase3[0].data, suppliers: phase3[1].data, materials: phase3[2].data, material_movements: phase3[3].data, recovered_items: phase3[4].data, recovered_item_files: phase3[5].data, recovery_time_entries: phase3[6].data, recovery_expenses: phase3[7].data, external_collaborators: phase3[8].data, antitarlo_treatments: phase3[9].data } : {}), ...(!siteError ? { site_collection_items: site[0].data, site_collection_item_sources: site[1].data, site_collection_images: site[2].data, site_portfolio_projects: site[3].data, site_portfolio_project_sources: site[4].data, site_portfolio_images: site[5].data, customer_inquiries: site[6].data, customer_inquiry_files: site[7].data } : {}) }
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement('a')

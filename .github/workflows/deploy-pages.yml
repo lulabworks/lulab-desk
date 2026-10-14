@@ -47,6 +47,9 @@ jobs:
       - name: Test Fase 3 e regressioni
         run: pnpm test:phase3
 
+      - name: Test gestione sito pubblico
+        run: pnpm test:site
+
       - name: Compila l'applicazione
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}

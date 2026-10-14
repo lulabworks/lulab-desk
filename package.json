@@ -9,7 +9,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --pretty false",
-    "test:phase3": "node scripts/verify-phase3.mjs"
+    "test:phase3": "node scripts/verify-phase3.mjs",
+    "test:site": "node scripts/verify-site.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

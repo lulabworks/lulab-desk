@@ -66,6 +66,10 @@ export type PaymentKind = 'acconto' | 'saldo' | 'altro'
 export type MaterialMovementType = 'carico' | 'scarico' | 'rettifica' | 'consumo_commessa' | 'consumo_recupero'
 export type RecoveredItemStatus = 'acquisito' | 'da_restaurare' | 'in_restauro' | 'pronto' | 'in_vendita' | 'venduto'
 export type AntitarloStatus = 'da_programmare' | 'ritirato' | 'dal_collaboratore' | 'in_rientro' | 'pronto_riconsegna' | 'riconsegnato' | 'annullato'
+export type SitePublicationStatus = 'bozza' | 'pubblicato' | 'non_pubblicato'
+export type SiteCollectionAvailability = 'disponibile' | 'riservato' | 'non_disponibile'
+export type SitePortfolioImageKind = 'prima' | 'durante' | 'dopo'
+export type CustomerInquiryStatus = 'nuova' | 'in_valutazione' | 'convertita' | 'archiviata' | 'spam'
 
 export interface JobFile {
   id: string
@@ -206,6 +210,121 @@ export interface AntitarloTreatment {
   collaborator?: Pick<ExternalCollaborator, 'id' | 'name'> | null
 }
 
+export interface SiteCollectionItem {
+  id: string
+  slug: string
+  title: string
+  description: string
+  materials: string | null
+  dimensions: string | null
+  condition_description: string | null
+  availability: SiteCollectionAvailability
+  publication_status: SitePublicationStatus
+  show_price: boolean
+  public_price: number | null
+  is_featured: boolean
+  featured_order: number | null
+  sort_order: number
+  seo_title: string | null
+  seo_description: string | null
+  published_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface SiteCollectionItemSource {
+  collection_item_id: string
+  recovered_item_id: string
+  linked_at: string
+}
+
+export interface SiteCollectionImage {
+  id: string
+  collection_item_id: string
+  storage_bucket: 'site-drafts' | 'site-public'
+  storage_path: string
+  alt_text: string
+  caption: string | null
+  mime_type: string
+  size_bytes: number
+  width: number | null
+  height: number | null
+  is_cover: boolean
+  sort_order: number
+  created_at: string
+  display_url?: string
+}
+
+export interface SitePortfolioProject {
+  id: string
+  slug: string
+  title: string
+  summary: string
+  description: string
+  category: string
+  publication_status: SitePublicationStatus
+  is_featured: boolean
+  featured_order: number | null
+  sort_order: number
+  seo_title: string | null
+  seo_description: string | null
+  published_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface SitePortfolioProjectSource {
+  portfolio_project_id: string
+  job_id: string
+  linked_at: string
+}
+
+export interface SitePortfolioImage {
+  id: string
+  portfolio_project_id: string
+  image_kind: SitePortfolioImageKind
+  storage_bucket: 'site-drafts' | 'site-public'
+  storage_path: string
+  alt_text: string
+  caption: string | null
+  mime_type: string
+  size_bytes: number
+  width: number | null
+  height: number | null
+  is_cover: boolean
+  sort_order: number
+  created_at: string
+  display_url?: string
+}
+
+export interface CustomerInquiry {
+  id: string
+  reference_code: string
+  status: CustomerInquiryStatus
+  request_type: string
+  customer_name: string
+  email: string | null
+  phone: string | null
+  message: string
+  source_page: string | null
+  privacy_consent_at: string
+  handled_by: string | null
+  converted_job_id: string | null
+  submitted_at: string
+  updated_at: string
+}
+
+export interface CustomerInquiryFile {
+  id: string
+  inquiry_id: string
+  storage_path: string
+  file_name: string
+  mime_type: string
+  size_bytes: number
+  created_at: string
+  signed_url?: string
+}
+
 export const FILE_CATEGORIES: Array<{ value: JobFileCategory; label: string }> = [
   { value: 'prima', label: 'Prima' },
   { value: 'durante', label: 'Durante' },
@@ -251,6 +370,32 @@ export const RECOVERY_STATUSES: Array<{ value: RecoveredItemStatus; label: strin
 ]
 export const ANTITARLO_STATUSES: Array<{ value: AntitarloStatus; label: string; tone: string }> = [
   { value: 'da_programmare', label: 'Da programmare', tone: 'bg-stone-100 text-stone-700' }, { value: 'ritirato', label: 'Ritirato', tone: 'bg-sky-100 text-sky-800' }, { value: 'dal_collaboratore', label: 'Dal collaboratore', tone: 'bg-violet-100 text-violet-800' }, { value: 'in_rientro', label: 'In rientro', tone: 'bg-orange-100 text-orange-800' }, { value: 'pronto_riconsegna', label: 'Pronto per riconsegna', tone: 'bg-lime-100 text-lime-800' }, { value: 'riconsegnato', label: 'Riconsegnato', tone: 'bg-emerald-700 text-white' }, { value: 'annullato', label: 'Annullato', tone: 'bg-red-100 text-red-800' }
+]
+
+export const SITE_PUBLICATION_STATUSES: Array<{ value: SitePublicationStatus; label: string; tone: string }> = [
+  { value: 'bozza', label: 'Bozza', tone: 'bg-stone-100 text-stone-700' },
+  { value: 'pubblicato', label: 'Pubblicato', tone: 'bg-emerald-100 text-emerald-800' },
+  { value: 'non_pubblicato', label: 'Ritirato', tone: 'bg-amber-100 text-amber-900' }
+]
+
+export const SITE_COLLECTION_AVAILABILITIES: Array<{ value: SiteCollectionAvailability; label: string }> = [
+  { value: 'disponibile', label: 'Disponibile' },
+  { value: 'riservato', label: 'Riservato' },
+  { value: 'non_disponibile', label: 'Non disponibile' }
+]
+
+export const SITE_PORTFOLIO_IMAGE_KINDS: Array<{ value: SitePortfolioImageKind; label: string }> = [
+  { value: 'prima', label: 'Prima' },
+  { value: 'durante', label: 'Durante' },
+  { value: 'dopo', label: 'Dopo' }
+]
+
+export const CUSTOMER_INQUIRY_STATUSES: Array<{ value: CustomerInquiryStatus; label: string; tone: string }> = [
+  { value: 'nuova', label: 'Nuova', tone: 'bg-blue-100 text-blue-800' },
+  { value: 'in_valutazione', label: 'In valutazione', tone: 'bg-amber-100 text-amber-900' },
+  { value: 'convertita', label: 'Convertita', tone: 'bg-emerald-100 text-emerald-800' },
+  { value: 'archiviata', label: 'Archiviata', tone: 'bg-stone-100 text-stone-700' },
+  { value: 'spam', label: 'Spam', tone: 'bg-red-100 text-red-800' }
 ]
 
 export const JOB_TYPES: Array<{ value: JobType; label: string }> = [

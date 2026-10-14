@@ -70,6 +70,35 @@ Riferimenti: [backup database Supabase](https://supabase.com/docs/guides/platfor
 
 La migrazione non riscrive le migrazioni precedenti. Aggiunge i collegamenti antitarlo a spese, pagamenti e agenda e introduce il registro di magazzino append-only. Le giacenze possono cambiare esclusivamente tramite nuovi movimenti; ogni consumo salva il costo unitario del momento e ogni correzione viene registrata come storno. Materiali, commesse, recuperi e fornitori referenziati dallo storico non possono essere eliminati a cascata.
 
+## Gestione del sito pubblico
+
+La sezione **Sito** permette agli editor autorizzati di gestire:
+
+- Collezione LuLab, anche partendo dai mobili presenti nei Recuperi;
+- progetti del portfolio, anche partendo da una commessa;
+- fotografie private di bozza e copie pubbliche ottimizzate;
+- pubblicazione, ritiro, ordinamento e contenuti in evidenza;
+- richieste ricevute dal sito e relativi allegati privati.
+
+La migrazione incrementale è `supabase/migrations/004_public_site.sql` e deve essere applicata una sola volta dopo `001`, `002` e `003`. Prima dell’esecuzione occorre disporre di un dump recuperabile dello schema e dei dati: il piano Free non include backup gestiti. La migrazione crea le tabelle editoriali, l’allowlist `site_editors` e i bucket:
+
+- `site-drafts`, privato, per preparare le fotografie;
+- `site-public`, pubblico, esclusivamente per le copie approvate;
+- `inquiry-uploads`, privato, per gli allegati delle richieste.
+
+Il primo owner non viene creato automaticamente. Dopo la migrazione, un amministratore del database deve verificare l’UUID dell’utente LuLab in `auth.users` e aggiungerlo esplicitamente:
+
+```sql
+insert into public.site_editors (user_id, role)
+values ('UUID_UTENTE_LULAB_VERIFICATO', 'owner');
+```
+
+Il test transazionale `supabase/tests/004_public_site_security.sql` deve essere eseguito con arresto al primo errore su un database di prova oppure, dopo un backup verificato, prima dell’uso operativo delle nuove funzioni. Il rollback finale non conserva i dati di test.
+
+I prezzi pubblici restano disattivati: l’interfaccia salva sempre `show_price=false` e `public_price=null`. Le tabelle di collegamento a commesse e recuperi non sono leggibili dal visitatore anonimo.
+
+La pubblicazione richiama facoltativamente una Edge Function denominata `site-rebuild`. Finché la funzione e il workflow del repository Astro non sono collegati, i dati pubblicati sono disponibili su Supabase ma il sito statico non viene rigenerato automaticamente.
+
 ## Variabili locali
 
 Il file `.env.local` nella cartella principale deve contenere:
@@ -145,11 +174,14 @@ Verifiche di produzione:
 ```bash
 pnpm typecheck
 pnpm test:phase3
+pnpm test:site
 pnpm build
 pnpm preview
 ```
 
 `test:phase3` controlla i calcoli economici, la logica dei movimenti, la struttura RLS/permessi della migrazione 003 e verifica che le migrazioni 001 e 002 non siano state alterate.
+
+`test:site` controlla struttura e RLS della migrazione 004, navigazione, prezzi nascosti, gestione richieste e ciclo fotografie bozza/pubblicazione/ritiro. Non sostituisce l’esecuzione SQL su PostgreSQL/Supabase.
 
 ## Funzioni Fase 2
 
@@ -188,6 +220,7 @@ Le modifiche alla scheda commessa vengono accodate e salvate in ordine. Cambiand
 - **Fase 1:** implementata e mantenuta.
 - **Fase 2:** implementata.
 - **Fase 3:** implementata; la migrazione `003_phase3_management.sql` è stata applicata al progetto Supabase configurato.
-- **GitHub Pages:** configurazione locale pronta; repository e pubblicazione non ancora creati.
+- **Sito:** interfaccia editoriale implementata localmente; la migrazione 004 non è ancora stata applicata perché il progetto Free non dispone di un backup recuperabile.
+- **GitHub Pages:** pubblicazione del gestionale configurata nel repository dedicato.
 
-Il progetto locale non è collegato a GitHub e nessun repository remoto è stato modificato.
+Nessuna modifica al database o al repository remoto viene effettuata dalle normali verifiche locali.
