@@ -88,10 +88,10 @@ export function DashboardPage() {
         ))}
       </section>
 
-      <Panel className="mt-4 flex items-center justify-between gap-4 overflow-hidden bg-brand text-white">
-        <div><p className="type-meta text-accent">Da incassare</p><p className="mt-1 text-3xl type-amount">{loading ? '—' : money.format(metrics.outstanding)}</p><p className="mt-1 text-xs text-white/65">Ricavi concordati meno pagamenti registrati</p></div>
+      <section className="mt-4 flex min-w-0 max-w-full items-center justify-between gap-4 overflow-hidden rounded-2xl border border-line bg-brand p-5 text-white shadow-card">
+        <div><p className="type-meta text-accent">Da incassare</p><p className="mt-1 text-3xl type-amount text-white">{loading ? '—' : money.format(metrics.outstanding)}</p><p className="mt-1 text-xs text-white/80">Ricavi concordati meno pagamenti registrati</p></div>
         <CircleDollarSign size={42} className="shrink-0 text-white/25" />
-      </Panel>
+      </section>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.35fr_.85fr]">
         <Panel>
