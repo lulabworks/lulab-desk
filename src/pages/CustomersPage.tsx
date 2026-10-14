@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import { Button, EmptyState, Field, Input, Modal, ModalPresence, Notice, PageHeader, Textarea } from '../components/ui'
 import { readableError, supabase } from '../lib/supabase'
+import { recordSuccessfulOperation } from '../lib/adaptive/usage'
+import { useAuth } from '../contexts/AuthContext'
 import type { Customer } from '../lib/types'
 
 interface CustomerWithJobs extends Customer { jobs?: Array<{ id: string; status: string }> }
@@ -18,6 +20,7 @@ const customerSchema = z.object({
 const emptyForm = { display_name: '', phone: '', email: '', address: '', notes: '' }
 
 export function CustomersPage() {
+  const { user } = useAuth()
   const [customers, setCustomers] = useState<CustomerWithJobs[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -71,6 +74,7 @@ export function CustomersPage() {
     const { data, error: saveError } = await queryBuilder.select('*, jobs(id, status)').single()
     setSaving(false)
     if (saveError) return setFormError(readableError(saveError))
+    recordSuccessfulOperation(user?.id, editing ? 'customer.updated' : 'customer.created')
     setCustomers((current) => editing ? current.map((item) => item.id === editing.id ? data as CustomerWithJobs : item).sort((a, b) => a.display_name.localeCompare(b.display_name)) : [...current, data as CustomerWithJobs].sort((a, b) => a.display_name.localeCompare(b.display_name)))
     setModalOpen(false)
   }
@@ -79,6 +83,7 @@ export function CustomersPage() {
     if (!editing || !supabase || !window.confirm(`Eliminare ${editing.display_name}? Le commesse resteranno disponibili ma senza cliente associato.`)) return
     const { error: deleteError } = await supabase.from('customers').delete().eq('id', editing.id)
     if (deleteError) return setFormError(readableError(deleteError))
+    recordSuccessfulOperation(user?.id, 'customer.deleted')
     setCustomers((current) => current.filter((item) => item.id !== editing.id))
     setModalOpen(false)
   }

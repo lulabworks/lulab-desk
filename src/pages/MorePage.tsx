@@ -4,8 +4,11 @@ import { Button, Field, Input, Notice, PageHeader, Panel } from '../components/u
 import { readableError, supabase } from '../lib/supabase'
 import { isPhase3Unavailable } from '../lib/phase3'
 import { isPublicSiteUnavailable } from '../lib/site'
+import { useAuth } from '../contexts/AuthContext'
+import { recordSuccessfulOperation } from '../lib/adaptive/usage'
 
 export function MorePage() {
+  const { user } = useAuth()
   const [hourlyRate, setHourlyRate] = useState(35)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
@@ -26,6 +29,7 @@ export function MorePage() {
     setMessage(null)
     const { error } = await supabase.from('user_settings').upsert({ hourly_rate: hourlyRate })
     setSaving(false)
+    if (!error) recordSuccessfulOperation(user?.id, 'settings.rate_saved')
     setMessage(error ? { tone: 'error', text: readableError(error) } : { tone: 'success', text: 'Impostazioni salvate.' })
   }
 
@@ -64,6 +68,7 @@ export function MorePage() {
       anchor.click()
       URL.revokeObjectURL(url)
       setMessage({ tone: 'success', text: 'Esportazione completata.' })
+      recordSuccessfulOperation(user?.id, 'settings.data_exported')
     }
     setExporting(false)
   }

@@ -26,6 +26,8 @@ import {
   type SiteImage
 } from '../lib/site'
 import { readableError, supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
+import { recordSuccessfulOperation } from '../lib/adaptive/usage'
 import {
   SITE_COLLECTION_AVAILABILITIES,
   SITE_PORTFOLIO_IMAGE_KINDS,
@@ -39,6 +41,7 @@ import {
 } from '../lib/types'
 
 export function SiteContentEditorPage() {
+  const { user } = useAuth()
   const { id } = useParams()
   const location = useLocation()
   const kind: SiteContentKind = location.pathname.includes('/collezione/') ? 'collection' : 'portfolio'
@@ -131,6 +134,7 @@ export function SiteContentEditorPage() {
       setError(readableError(saveError))
       return false
     }
+    recordSuccessfulOperation(user?.id, 'site.content_saved')
     if (showMessage) setMessage('Modifiche salvate.')
     return true
   }
@@ -152,6 +156,7 @@ export function SiteContentEditorPage() {
         startOrder: images.length,
         setFirstAsCover: images.length === 0
       })
+      recordSuccessfulOperation(user?.id, 'site.image_uploaded')
       setMessage(files.length === 1 ? 'Fotografia aggiunta alla bozza.' : `${files.length} fotografie aggiunte alla bozza.`)
       await load()
     } catch (uploadError) {
@@ -165,6 +170,7 @@ export function SiteContentEditorPage() {
     if (!supabase) return
     const { error: updateError } = await supabase.from(imageTable).update(changes).eq('id', image.id)
     if (updateError) return setError(readableError(updateError))
+    recordSuccessfulOperation(user?.id, 'site.image_updated')
     setImages((current) => current.map((item) => item.id === image.id ? { ...item, ...changes } as SiteImage : item))
   }
 
@@ -176,6 +182,7 @@ export function SiteContentEditorPage() {
     const { error: coverError } = clearError ? { error: clearError } : await supabase.from(imageTable).update({ is_cover: true }).eq('id', image.id)
     setSaving(false)
     if (coverError) return setError(readableError(coverError))
+    recordSuccessfulOperation(user?.id, 'site.image_updated')
     setImages((current) => current.map((item) => item.storage_bucket === image.storage_bucket ? { ...item, is_cover: item.id === image.id } as SiteImage : item))
     setMessage('Copertina aggiornata.')
   }
@@ -195,7 +202,7 @@ export function SiteContentEditorPage() {
     if (updateError) {
       setError(readableError(updateError))
       await load()
-    }
+    } else recordSuccessfulOperation(user?.id, 'site.image_reordered')
   }
 
   async function removeImage(image: SiteImage) {
@@ -204,6 +211,7 @@ export function SiteContentEditorPage() {
     setError('')
     try {
       await deleteSiteImage(kind, image)
+      recordSuccessfulOperation(user?.id, 'site.image_deleted')
       setImages((current) => current.filter((item) => item.id !== image.id))
       setMessage('Fotografia eliminata.')
     } catch (removeError) {
@@ -225,6 +233,7 @@ export function SiteContentEditorPage() {
     setMessage('')
     try {
       await changeSitePublication({ kind, parentId: content.id, images, nextStatus: next })
+      recordSuccessfulOperation(user?.id, next === 'pubblicato' ? 'site.published' : 'site.withdrawn')
       setMessage(next === 'pubblicato'
         ? 'Pubblicato su Supabase. Il sito pubblico si aggiornerà automaticamente entro pochi minuti.'
         : 'Ritirato da Supabase. Il sito pubblico si aggiornerà automaticamente entro pochi minuti.')

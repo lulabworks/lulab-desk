@@ -5,11 +5,14 @@ import { formatDate, money, todayIso } from '../lib/format'
 import { isMaterialMovementReversed, isPhase3Unavailable, movementCost } from '../lib/phase3'
 import { readableError, supabase } from '../lib/supabase'
 import { MATERIAL_UNITS, MOVEMENT_TYPES, type Job, type Material, type MaterialCategory, type MaterialMovement, type MaterialMovementType, type RecoveredItem, type Supplier } from '../lib/types'
+import { useAuth } from '../contexts/AuthContext'
+import { recordSuccessfulOperation } from '../lib/adaptive/usage'
 
 const blankMaterial = () => ({ name: '', code: '', category_id: '', supplier_id: '', unit: 'pz', unit_price: 0, minimum_stock: 0, notes: '' })
 const blankMovement = () => ({ material_id: '', movement_type: 'carico' as MaterialMovementType, quantity: 1, unit_cost: 0, occurred_on: todayIso(), job_id: '', recovered_item_id: '', supplier_id: '', notes: '' })
 
 export function MaterialsPage() {
+  const { user } = useAuth()
   const [materials, setMaterials] = useState<Material[]>([])
   const [categories, setCategories] = useState<MaterialCategory[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
@@ -76,6 +79,7 @@ export function MaterialsPage() {
     const result = editing ? await supabase.from('materials').update(payload).eq('id', editing.id) : await supabase.from('materials').insert(payload)
     setSaving(false)
     if (result.error) return setError(readableError(result.error))
+    recordSuccessfulOperation(user?.id, 'materials.saved')
     setDialog(null); setEditing(null); await load()
   }
 
@@ -89,6 +93,7 @@ export function MaterialsPage() {
     if (!movementError && movementForm.movement_type === 'carico') await supabase.from('materials').update({ unit_price: Number(movementForm.unit_cost), supplier_id: movementForm.supplier_id || null }).eq('id', movementForm.material_id)
     setSaving(false)
     if (movementError) return setError(readableError(movementError))
+    recordSuccessfulOperation(user?.id, movementForm.movement_type === 'consumo_recupero' ? 'recovery.material_used' : 'materials.movement_created')
     setDialog(null); await load()
   }
 
@@ -99,6 +104,7 @@ export function MaterialsPage() {
     const result = dialog === 'category' ? await supabase.from('material_categories').insert({ name: simpleName.trim() }) : await supabase.from('suppliers').insert({ name: simpleName.trim(), phone: supplierContact.phone.trim() || null, email: supplierContact.email.trim() || null })
     setSaving(false)
     if (result.error) return setError(readableError(result.error))
+    recordSuccessfulOperation(user?.id, dialog === 'category' ? 'materials.category_created' : 'materials.supplier_created')
     setSimpleName(''); setSupplierContact({ phone: '', email: '' }); setDialog(null); await load()
   }
 
@@ -117,6 +123,7 @@ export function MaterialsPage() {
       notes: `Storno del movimento del ${formatDate(item.occurred_on)}`
     })
     if (reverseError) return setError(readableError(reverseError))
+    recordSuccessfulOperation(user?.id, 'materials.movement_reversed')
     await load()
   }
 

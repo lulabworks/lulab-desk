@@ -1,10 +1,12 @@
 import { Armchair, BarChart3, Boxes, CalendarDays, Globe2, Hammer, Home, Menu, MoreHorizontal, ShieldCheck, Users, X, LogOut } from 'lucide-react'
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'motion/react'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { navIndicatorSpring, tapSpring } from '../lib/animations'
 import { BRAND } from '../lib/brand'
+import { sectionFeatureForPath } from '../lib/adaptive/catalog'
+import { recordSectionVisit } from '../lib/adaptive/usage'
 import { BrandLogo } from './BrandLogo'
 
 const navigation = [
@@ -54,6 +56,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const reduceMotion = useReducedMotion()
+
+  useEffect(() => {
+    recordSectionVisit(user?.id, sectionFeatureForPath(location.pathname), location.key)
+  }, [location.key, location.pathname, user?.id])
 
   return (
     <LayoutGroup id="lulab-desk-shell">

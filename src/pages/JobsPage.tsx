@@ -9,6 +9,8 @@ import { listSpring, sharedElementSpring, tapSpring } from '../lib/animations'
 import { formatDate } from '../lib/format'
 import { readableError, supabase } from '../lib/supabase'
 import { JOB_STATUSES, JOB_TYPES, jobStatusMeta, jobTypeLabel, type Job, type JobType } from '../lib/types'
+import { useAuth } from '../contexts/AuthContext'
+import { recordSuccessfulOperation } from '../lib/adaptive/usage'
 
 const jobSchema = z.object({
   title: z.string().trim().min(2, 'Inserisci un titolo di almeno 2 caratteri.').max(120),
@@ -16,6 +18,7 @@ const jobSchema = z.object({
 })
 
 export function JobsPage() {
+  const { user } = useAuth()
   const reduceMotion = useReducedMotion()
   const [searchParams, setSearchParams] = useSearchParams()
   const [jobs, setJobs] = useState<Job[]>([])
@@ -68,6 +71,7 @@ export function JobsPage() {
     const { data, error: createError } = await supabase.from('jobs').insert(parsed.data).select('*, customer:customers(id, display_name, phone)').single()
     setCreating(false)
     if (createError) return setFormError(readableError(createError))
+    recordSuccessfulOperation(user?.id, 'job.created')
     setJobs((current) => [data as Job, ...current])
     closeModal()
   }

@@ -19,6 +19,8 @@ import { Button, EmptyState, Field, Input, Modal, ModalPresence, Notice, PageHea
 import { formatDate } from '../lib/format'
 import { isPublicSiteUnavailable, makeSiteSlug, withSiteImageUrls } from '../lib/site'
 import { readableError, supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
+import { recordSuccessfulOperation } from '../lib/adaptive/usage'
 import {
   CUSTOMER_INQUIRY_STATUSES,
   SITE_PUBLICATION_STATUSES,
@@ -43,6 +45,7 @@ const areaOptions: Array<{ value: Area; label: string; icon: typeof PackageOpen 
 ]
 
 export function SitePage() {
+  const { user } = useAuth()
   const navigate = useNavigate()
   const [area, setArea] = useState<Area>('collection')
   const [collection, setCollection] = useState<SiteCollectionItem[]>([])
@@ -164,6 +167,7 @@ export function SitePage() {
           return setError(readableError(sourceError))
         }
       }
+      recordSuccessfulOperation(user?.id, 'site.content_created')
       setCreateKind(null)
       navigate(`/sito/collezione/${data.id}`)
     } else {
@@ -188,6 +192,7 @@ export function SitePage() {
           return setError(readableError(sourceError))
         }
       }
+      recordSuccessfulOperation(user?.id, 'site.content_created')
       setCreateKind(null)
       navigate(`/sito/progetti/${data.id}`)
     }
@@ -213,6 +218,7 @@ export function SitePage() {
     const { error: updateError } = await supabase.from('customer_inquiries').update({ status }).eq('id', selectedInquiry.id)
     setSaving(false)
     if (updateError) return setError(readableError(updateError))
+    recordSuccessfulOperation(user?.id, 'site.inquiry_updated')
     setSelectedInquiry((current) => current ? { ...current, status } : current)
     setInquiries((current) => current.map((item) => item.id === selectedInquiry.id ? { ...item, status } : item))
     setMessage('Stato della richiesta aggiornato.')

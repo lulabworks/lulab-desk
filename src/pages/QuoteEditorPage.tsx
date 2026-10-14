@@ -7,8 +7,11 @@ import { calculateQuoteTotals } from '../lib/phase2'
 import { generateQuotePdf } from '../lib/quotePdf'
 import { readableError, supabase } from '../lib/supabase'
 import { QUOTE_STATUSES, type Customer, type Job, type Quote, type QuoteItem, type QuoteStatus } from '../lib/types'
+import { recordSuccessfulOperation } from '../lib/adaptive/usage'
+import { useAuth } from '../contexts/AuthContext'
 
 export function QuoteEditorPage() {
+  const { user } = useAuth()
   const { id: jobId, quoteId } = useParams()
   const navigate = useNavigate()
   const [quote, setQuote] = useState<Quote | null>(null)
@@ -55,6 +58,7 @@ export function QuoteEditorPage() {
     if (!supabase || !quoteId) return
     const { data, error } = await supabase.from('quote_items').insert({ quote_id: quoteId, description: 'Nuovo materiale', quantity: 1, unit: 'pz', unit_price: 0, sort_order: items.length }).select().single()
     if (error) return setMessage({ tone: 'error', text: readableError(error) })
+    recordSuccessfulOperation(user?.id, 'quote.item_created')
     setItems((current) => [...current, data as QuoteItem])
   }
 
@@ -62,6 +66,7 @@ export function QuoteEditorPage() {
     if (!supabase || !window.confirm('Rimuovere questa voce dal preventivo?')) return
     const { error } = await supabase.from('quote_items').delete().eq('id', itemId)
     if (error) return setMessage({ tone: 'error', text: readableError(error) })
+    recordSuccessfulOperation(user?.id, 'quote.item_deleted')
     setItems((current) => current.filter((item) => item.id !== itemId))
   }
 
@@ -96,6 +101,7 @@ export function QuoteEditorPage() {
       setMessage({ tone: 'error', text: readableError(firstError) })
       return false
     }
+    recordSuccessfulOperation(user?.id, 'quote.updated')
     setQuote(quoteResult.data as Quote)
     if (showSuccess) setMessage({ tone: 'success', text: 'Preventivo salvato.' })
     return true
@@ -113,6 +119,7 @@ export function QuoteEditorPage() {
     if (!supabase || !quote || !jobId || !window.confirm('Eliminare definitivamente questo preventivo?')) return
     const { error } = await supabase.from('quotes').delete().eq('id', quote.id)
     if (error) return setMessage({ tone: 'error', text: readableError(error) })
+    recordSuccessfulOperation(user?.id, 'quote.deleted')
     navigate(`/lavori/${jobId}`, { replace: true })
   }
 

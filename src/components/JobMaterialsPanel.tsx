@@ -3,10 +3,13 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { formatDate, money, todayIso } from '../lib/format'
 import { effectiveMaterialMovements, isMaterialMovementReversed, isPhase3Unavailable, movementCost } from '../lib/phase3'
 import { readableError, supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
+import { recordSuccessfulOperation } from '../lib/adaptive/usage'
 import type { Material, MaterialMovement } from '../lib/types'
 import { Button, EmptyState, Field, Input, Modal, ModalPresence, Notice, Panel, Select, Textarea } from './ui'
 
 export function JobMaterialsPanel({ jobId }: { jobId: string }) {
+  const { user } = useAuth()
   const [materials, setMaterials] = useState<Material[]>([])
   const [movements, setMovements] = useState<MaterialMovement[]>([])
   const [open, setOpen] = useState(false)
@@ -49,6 +52,7 @@ export function JobMaterialsPanel({ jobId }: { jobId: string }) {
     const { error: addError } = await supabase.from('material_movements').insert({ material_id: material.id, movement_type: 'consumo_commessa', quantity_delta: -Math.abs(Number(form.quantity)), unit_cost_snapshot: Number(material.unit_price), occurred_on: form.occurred_on, job_id: jobId, notes: form.notes.trim() || null })
     setSaving(false)
     if (addError) return setError(readableError(addError))
+    recordSuccessfulOperation(user?.id, 'materials.movement_created')
     setOpen(false)
     setForm({ material_id: '', quantity: 1, occurred_on: todayIso(), notes: '' })
     await load()
@@ -58,6 +62,7 @@ export function JobMaterialsPanel({ jobId }: { jobId: string }) {
     if (!supabase || item.reversal_of_id || isMaterialMovementReversed(item, movements) || !window.confirm('Stornare questo consumo? Il record originale resterà nello storico.')) return
     const { error: reverseError } = await supabase.from('material_movements').insert({ material_id: item.material_id, movement_type: 'rettifica', quantity_delta: -Number(item.quantity_delta), unit_cost_snapshot: Number(item.unit_cost_snapshot), occurred_on: todayIso(), job_id: item.job_id, recovered_item_id: item.recovered_item_id, supplier_id: item.supplier_id, reversal_of_id: item.id, notes: `Storno consumo del ${formatDate(item.occurred_on)}` })
     if (reverseError) return setError(readableError(reverseError))
+    recordSuccessfulOperation(user?.id, 'materials.movement_reversed')
     await load()
   }
 

@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --pretty false",
     "test:phase3": "node scripts/verify-phase3.mjs",
-    "test:site": "node scripts/verify-site.mjs"
+    "test:site": "node scripts/verify-site.mjs",
+    "test:adaptive": "node scripts/verify-adaptive.mjs",
+    "test": "pnpm test:phase3 && pnpm test:site && pnpm test:adaptive"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

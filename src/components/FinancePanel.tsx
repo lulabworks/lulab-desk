@@ -6,9 +6,12 @@ import { isPhase2Unavailable } from '../lib/phase2'
 import { effectiveMaterialMovements, movementCost } from '../lib/phase3'
 import { readableError, supabase } from '../lib/supabase'
 import { EXPENSE_CATEGORIES, PAYMENT_KINDS, type ExpenseCategory, type Job, type JobExpense, type JobPayment, type MaterialMovement, type PaymentKind, type TimeEntry } from '../lib/types'
+import { useAuth } from '../contexts/AuthContext'
+import { recordSuccessfulOperation } from '../lib/adaptive/usage'
 import { Button, EmptyState, Field, Input, Modal, ModalPresence, Notice, Panel, Select, Textarea } from './ui'
 
 export function FinancePanel({ job }: { job: Job }) {
+  const { user } = useAuth()
   const [expenses, setExpenses] = useState<JobExpense[]>([])
   const [payments, setPayments] = useState<JobPayment[]>([])
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
@@ -59,6 +62,7 @@ export function FinancePanel({ job }: { job: Job }) {
     const { data, error: addError } = await supabase.from('job_expenses').insert(buildJobExpenseInsert(job.id, expense)).select().single()
     setSaving(false)
     if (addError) return setError(readableError(addError))
+    recordSuccessfulOperation(user?.id, 'finance.expense_created')
     setExpenses((current) => [data as JobExpense, ...current])
     setExpense({ category: 'materiali', description: '', amount: 0, incurred_on: todayIso(), supplier: '', notes: '' })
     setDialog(null)
@@ -71,6 +75,7 @@ export function FinancePanel({ job }: { job: Job }) {
     const { data, error: addError } = await supabase.from('job_payments').insert(buildJobPaymentInsert(job.id, payment)).select().single()
     setSaving(false)
     if (addError) return setError(readableError(addError))
+    recordSuccessfulOperation(user?.id, 'finance.payment_created')
     setPayments((current) => [data as JobPayment, ...current])
     setPayment({ kind: 'acconto', amount: 0, paid_on: todayIso(), method: '', notes: '' })
     setDialog(null)
@@ -80,6 +85,7 @@ export function FinancePanel({ job }: { job: Job }) {
     if (!supabase || !window.confirm('Eliminare questa registrazione?')) return
     const { error: removeError } = await supabase.from(table).delete().eq('id', id)
     if (removeError) return setError(readableError(removeError))
+    recordSuccessfulOperation(user?.id, 'finance.entry_deleted')
     if (table === 'job_expenses') setExpenses((current) => current.filter((item) => item.id !== id))
     else setPayments((current) => current.filter((item) => item.id !== id))
   }

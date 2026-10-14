@@ -7,11 +7,14 @@ import { Button, EmptyState, Field, Input, Modal, ModalPresence, Notice, PageHea
 import { isPhase2Unavailable } from '../lib/phase2'
 import { readableError, supabase } from '../lib/supabase'
 import { EVENT_TYPES, type AgendaEvent, type AgendaEventType, type Job } from '../lib/types'
+import { recordSuccessfulOperation } from '../lib/adaptive/usage'
+import { useAuth } from '../contexts/AuthContext'
 
 type EventForm = { title: string; event_type: AgendaEventType; job_id: string; date: string; start_time: string; end_time: string; all_day: boolean; location: string; notes: string }
 const emptyForm = (): EventForm => ({ title: '', event_type: 'appuntamento', job_id: '', date: format(new Date(), 'yyyy-MM-dd'), start_time: '09:00', end_time: '10:00', all_day: false, location: '', notes: '' })
 
 export function AgendaPage() {
+  const { user } = useAuth()
   const [events, setEvents] = useState<AgendaEvent[]>([])
   const [jobs, setJobs] = useState<Job[]>([])
   const [month, setMonth] = useState(startOfMonth(new Date()))
@@ -68,6 +71,7 @@ export function AgendaPage() {
     const result = editing === 'new' ? await supabase.from('agenda_events').insert(payload).select('*, job:jobs(id, title, code)').single() : await supabase.from('agenda_events').update(payload).eq('id', editing.id).select('*, job:jobs(id, title, code)').single()
     setSaving(false)
     if (result.error) return setError(readableError(result.error))
+    recordSuccessfulOperation(user?.id, editing === 'new' ? 'agenda.created' : 'agenda.updated')
     const saved = result.data as AgendaEvent
     setEvents((current) => (editing === 'new' ? [...current, saved] : current.map((item) => item.id === saved.id ? saved : item)).sort((a, b) => a.starts_at.localeCompare(b.starts_at)))
     setEditing(null)
@@ -78,6 +82,7 @@ export function AgendaPage() {
     const completed = !event.is_completed
     const { error: updateError } = await supabase.from('agenda_events').update({ is_completed: completed }).eq('id', event.id)
     if (updateError) return setError(readableError(updateError))
+    recordSuccessfulOperation(user?.id, 'agenda.completed')
     setEvents((current) => current.map((item) => item.id === event.id ? { ...item, is_completed: completed } : item))
   }
 
@@ -85,6 +90,7 @@ export function AgendaPage() {
     if (!supabase || !window.confirm(`Eliminare “${event.title}”?`)) return
     const { error: deleteError } = await supabase.from('agenda_events').delete().eq('id', event.id)
     if (deleteError) return setError(readableError(deleteError))
+    recordSuccessfulOperation(user?.id, 'agenda.deleted')
     setEvents((current) => current.filter((item) => item.id !== event.id))
     setEditing(null)
   }

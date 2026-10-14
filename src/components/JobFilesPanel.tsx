@@ -5,6 +5,7 @@ import { formatDate } from '../lib/format'
 import { isPhase2Unavailable } from '../lib/phase2'
 import { readableError, supabase } from '../lib/supabase'
 import { FILE_CATEGORIES, type JobFile, type JobFileCategory } from '../lib/types'
+import { recordSuccessfulOperation } from '../lib/adaptive/usage'
 import { EmptyState, Notice, Panel } from './ui'
 
 const MAX_SIZE = 15 * 1024 * 1024
@@ -58,6 +59,7 @@ export function JobFilesPanel({ jobId }: { jobId: string }) {
       setUploading(false)
       return setError(readableError(dbError))
     }
+    recordSuccessfulOperation(user.id, 'files.uploaded')
     const { data: signed } = await supabase.storage.from('job-files').createSignedUrl(path, 3600)
     setFiles((current) => [{ ...(data as JobFile), signed_url: signed?.signedUrl }, ...current])
     setActive(category)
@@ -70,6 +72,7 @@ export function JobFilesPanel({ jobId }: { jobId: string }) {
     if (dbError) return setError(readableError(dbError))
     const { error: storageError } = await supabase.storage.from('job-files').remove([file.storage_path])
     if (storageError) setError(`Record eliminato, ma il file non è stato rimosso dallo storage: ${readableError(storageError)}`)
+    recordSuccessfulOperation(user?.id, 'files.deleted')
     setFiles((current) => current.filter((item) => item.id !== file.id))
   }
 

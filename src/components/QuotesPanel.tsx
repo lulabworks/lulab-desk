@@ -6,8 +6,11 @@ import { formatDate, money } from '../lib/format'
 import { isPhase2Unavailable } from '../lib/phase2'
 import { readableError, supabase } from '../lib/supabase'
 import { QUOTE_STATUSES, type Job, type Quote } from '../lib/types'
+import { useAuth } from '../contexts/AuthContext'
+import { recordSuccessfulOperation } from '../lib/adaptive/usage'
 
 export function QuotesPanel({ job }: { job: Job }) {
+  const { user } = useAuth()
   const navigate = useNavigate()
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [loading, setLoading] = useState(true)
@@ -42,6 +45,7 @@ export function QuotesPanel({ job }: { job: Job }) {
     }).select().single()
     setCreating(false)
     if (createError) return setError(readableError(createError))
+    recordSuccessfulOperation(user?.id, 'quote.created')
     navigate(`/lavori/${job.id}/preventivi/${data.id}`)
   }
 

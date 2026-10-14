@@ -7,5 +7,6 @@ dist/
 *.log
 *.tsbuildinfo
 .vite/
+supabase/.temp/
 tmp/
 output/

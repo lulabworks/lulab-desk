@@ -11,11 +11,14 @@ import { TimeTrackingPanel } from '../components/TimeTrackingPanel'
 import { formatDate } from '../lib/format'
 import { listSpring, sharedElementSpring, tapSpring } from '../lib/animations'
 import { readableError, supabase } from '../lib/supabase'
+import { recordSuccessfulOperation } from '../lib/adaptive/usage'
+import { useAuth } from '../contexts/AuthContext'
 import { JOB_STATUSES, JOB_TYPES, jobStatusMeta, type Customer, type Job, type JobStatus, type JobTask, type JobType } from '../lib/types'
 
 type EditableJob = Pick<Job, 'title' | 'type' | 'customer_id' | 'status' | 'description' | 'notes' | 'technical_details' | 'due_date'>
 
 export function JobDetailPage() {
+  const { user } = useAuth()
   const reduceMotion = useReducedMotion()
   const { id } = useParams()
   const location = useLocation()
@@ -62,6 +65,7 @@ export function JobDetailPage() {
           .single()
 
         if (saveError) throw saveError
+        recordSuccessfulOperation(user?.id, 'job.updated')
         if (!mountedRef.current || currentJobIdRef.current !== id) return
 
         setJob(data as Job)
@@ -82,7 +86,7 @@ export function JobDetailPage() {
 
     saveQueueRef.current = operation
     return operation
-  }, [id])
+  }, [id, user?.id])
 
   const scheduleSave = useCallback((payload: EditableJob) => {
     const revision = ++revisionRef.current
@@ -158,6 +162,7 @@ export function JobDetailPage() {
     if (!title || !supabase || !id) return
     const { data, error: taskError } = await supabase.from('job_tasks').insert({ job_id: id, title, sort_order: tasks.length }).select().single()
     if (taskError) return setError(readableError(taskError))
+    recordSuccessfulOperation(user?.id, 'job.task_created')
     setTasks((current) => [...current, data as JobTask])
     setNewTask('')
   }
@@ -170,13 +175,14 @@ export function JobDetailPage() {
     if (taskError) {
       setTasks((current) => current.map((item) => item.id === task.id ? task : item))
       setError(readableError(taskError))
-    }
+    } else recordSuccessfulOperation(user?.id, 'job.task_updated')
   }
 
   async function removeTask(taskId: string) {
     if (!supabase || !window.confirm('Rimuovere questa attività?')) return
     const { error: taskError } = await supabase.from('job_tasks').delete().eq('id', taskId)
     if (taskError) return setError(readableError(taskError))
+    recordSuccessfulOperation(user?.id, 'job.task_deleted')
     setTasks((current) => current.filter((item) => item.id !== taskId))
   }
 
@@ -190,6 +196,7 @@ export function JobDetailPage() {
       setError(readableError(archiveError))
       return
     }
+    recordSuccessfulOperation(user?.id, 'job.completed')
     navigate('/lavori', { replace: true })
   }
 

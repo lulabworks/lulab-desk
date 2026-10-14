@@ -187,6 +187,7 @@ Verifiche di produzione:
 pnpm typecheck
 pnpm test:phase3
 pnpm test:site
+pnpm test:adaptive
 pnpm build
 pnpm preview
 ```
@@ -194,6 +195,14 @@ pnpm preview
 `test:phase3` controlla i calcoli economici, la logica dei movimenti, la struttura RLS/permessi della migrazione 003 e verifica che le migrazioni 001 e 002 non siano state alterate.
 
 `test:site` controlla struttura e RLS della migrazione 004, navigazione, prezzi nascosti, gestione richieste e ciclo fotografie bozza/pubblicazione/ritiro. Non sostituisce l’esecuzione SQL su PostgreSQL/Supabase.
+
+## LuLab Adaptive — statistiche aggregate
+
+La Fase 1 di LuLab Adaptive utilizza la migrazione additiva `supabase/migrations/005_usage_analytics.sql`, senza modificare le migrazioni 001–004. Il collaudo reale su PostgreSQL 17 isolato è stato superato; l’amministratore ha confermato l’applicazione della migrazione al progetto Supabase LuLab Desk e `collection_enabled = false`. La raccolta resta disabilitata fino ad approvazione separata. Raccoglie solo contatori per utente/giorno/funzione e l’ultimo utilizzo; non salva clic o dati delle lavorazioni. È invisibile nell’interfaccia e non raccoglie dati in sviluppo o test.
+
+Il criterio visite, l’elenco degli identificatori, la gestione degli errori, le query amministrative per disattivare/eliminare esclusivamente le statistiche e la query read-only per il report 30/90 giorni sono descritti in [`docs/LULAB-ADAPTIVE.md`](docs/LULAB-ADAPTIVE.md). Il report SQL è in `supabase/reports/usage_analytics_30_90_days.sql`; il test di sicurezza SQL è in `supabase/tests/005_usage_analytics_security.sql` e va eseguito soltanto in un database isolato con due utenti di test.
+
+La migrazione parte con `collection_enabled = false`: l'attivazione sarà esplicita dopo validazione. Ogni attività porta un timestamp UTC di origine (giorno definito in UTC anche per invii offline); il server accetta timestamp da 90 giorni nel passato a 5 minuti nel futuro. La coda IndexedDB è persistente fra chiusure e sessioni PWA e condivisa atomicamente fra schede; localStorage con Web Locks è il fallback. L'invio è circoscritto all'account autenticato corrente; le altre code restano separate. Le ricevute transazionali conservano solo una fingerprint SHA-256 e impediscono doppi incrementi anche con richieste concorrenti. `pnpm test:adaptive` verifica ripristino, cambio account, retry e concorrenza client simulata. Il test SQL transazionale è `supabase/tests/005_usage_analytics_security.sql`; il test PostgreSQL multi-sessione è `supabase/tests/005_usage_analytics_concurrency.sh` e va eseguito solo su un database isolato. Entrambi sono stati eseguiti con successo su PostgreSQL 17.11 e pgcrypto 1.3, con dipendenze Auth minime simulate; il cluster temporaneo è stato arrestato ed eliminato al termine.
 
 ## Funzioni Fase 2
 

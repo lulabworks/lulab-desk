@@ -4,9 +4,12 @@ import { formatDate, money, todayIso } from '../lib/format'
 import { isPhase2Unavailable, minutesLabel } from '../lib/phase2'
 import { readableError, supabase } from '../lib/supabase'
 import type { TimeEntry } from '../lib/types'
+import { useAuth } from '../contexts/AuthContext'
+import { recordSuccessfulOperation } from '../lib/adaptive/usage'
 import { Button, EmptyState, Field, Input, Modal, ModalPresence, Notice, Panel, Textarea } from './ui'
 
 export function TimeTrackingPanel({ jobId }: { jobId: string }) {
+  const { user } = useAuth()
   const [entries, setEntries] = useState<TimeEntry[]>([])
   const [hourlyRate, setHourlyRate] = useState(35)
   const [now, setNow] = useState(Date.now())
@@ -61,6 +64,7 @@ export function TimeTrackingPanel({ jobId }: { jobId: string }) {
     }).select().single()
     setWorking(false)
     if (startError) return setError(startError.code === '23505' ? 'C’è già un cronometro attivo in un’altra commessa.' : readableError(startError))
+    recordSuccessfulOperation(user?.id, 'time.timer_started')
     setEntries((current) => [data as TimeEntry, ...current])
     setNow(Date.now())
   }
@@ -78,6 +82,7 @@ export function TimeTrackingPanel({ jobId }: { jobId: string }) {
     }).eq('id', running.id).select().single()
     setWorking(false)
     if (stopError) return setError(readableError(stopError))
+    recordSuccessfulOperation(user?.id, 'time.timer_stopped')
     setEntries((current) => current.map((entry) => entry.id === running.id ? data as TimeEntry : entry))
   }
 
@@ -96,6 +101,7 @@ export function TimeTrackingPanel({ jobId }: { jobId: string }) {
     }).select().single()
     setWorking(false)
     if (addError) return setError(readableError(addError))
+    recordSuccessfulOperation(user?.id, 'time.manual_created')
     setEntries((current) => [data as TimeEntry, ...current])
     setManual({ work_date: todayIso(), hours: 1, minutes: 0, notes: '' })
     setShowManual(false)
@@ -105,6 +111,7 @@ export function TimeTrackingPanel({ jobId }: { jobId: string }) {
     if (!supabase || !window.confirm('Eliminare questa registrazione oraria?')) return
     const { error: removeError } = await supabase.from('time_entries').delete().eq('id', entry.id)
     if (removeError) return setError(readableError(removeError))
+    recordSuccessfulOperation(user?.id, 'time.deleted')
     setEntries((current) => current.filter((item) => item.id !== entry.id))
   }
 
