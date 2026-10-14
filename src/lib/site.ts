@@ -12,6 +12,7 @@ export type SiteImage = SiteCollectionImage | SitePortfolioImage
 const MAX_SOURCE_SIZE = 25 * 1024 * 1024
 const MAX_EDGE = 2200
 const WEBP_QUALITY = 0.86
+const JPEG_QUALITY = 0.88
 
 export function isPublicSiteUnavailable(error: unknown) {
   if (!error || typeof error !== 'object') return false
@@ -73,10 +74,19 @@ export async function optimizeSiteImage(file: File) {
   context.fillStyle = '#ffffff'
   context.fillRect(0, 0, width, height)
   context.drawImage(source, 0, 0, width, height)
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', WEBP_QUALITY))
+  let blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', WEBP_QUALITY))
   if (!blob) throw new Error('Non è stato possibile ottimizzare la fotografia.')
+  // Safari può ignorare il formato richiesto a toBlob e restituire PNG. Non
+  // dichiarare mai un tipo o un'estensione diversi dai byte effettivamente creati.
+  if (blob.type !== 'image/webp') {
+    blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', JPEG_QUALITY))
+  }
+  if (!blob || !['image/webp', 'image/jpeg'].includes(blob.type)) {
+    throw new Error('Il browser non riesce a creare una copia fotografica compatibile.')
+  }
   if (blob.size > 10 * 1024 * 1024) throw new Error('La copia ottimizzata supera il limite di 10 MB.')
-  return { blob, width, height }
+  const extension = blob.type === 'image/webp' ? 'webp' : 'jpg'
+  return { blob, width, height, mimeType: blob.type, extension }
 }
 
 export async function withSiteImageUrls<T extends SiteImage>(images: T[]): Promise<T[]> {
@@ -112,9 +122,9 @@ export async function uploadSiteImages({
   const inserted: SiteImage[] = []
   for (const [index, file] of files.entries()) {
     const optimized = await optimizeSiteImage(file)
-    const path = `${folder(kind)}/${parentId}/${crypto.randomUUID()}.webp`
+    const path = `${folder(kind)}/${parentId}/${crypto.randomUUID()}.${optimized.extension}`
     const { error: uploadError } = await supabase.storage.from('site-drafts').upload(path, optimized.blob, {
-      contentType: 'image/webp',
+      contentType: optimized.mimeType,
       upsert: false,
       cacheControl: '3600'
     })
@@ -126,7 +136,7 @@ export async function uploadSiteImages({
       storage_path: path,
       alt_text: altText.slice(0, 300) || 'Fotografia LuLab',
       caption: null,
-      mime_type: 'image/webp',
+      mime_type: optimized.mimeType,
       size_bytes: optimized.blob.size,
       width: optimized.width,
       height: optimized.height,
