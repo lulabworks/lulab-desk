@@ -97,7 +97,19 @@ Il test transazionale `supabase/tests/004_public_site_security.sql` deve essere 
 
 I prezzi pubblici restano disattivati: l’interfaccia salva sempre `show_price=false` e `public_price=null`. Le tabelle di collegamento a commesse e recuperi non sono leggibili dal visitatore anonimo.
 
-La pubblicazione richiama facoltativamente una Edge Function denominata `site-rebuild`. Finché la funzione e il workflow del repository Astro non sono collegati, i dati pubblicati sono disponibili su Supabase ma il sito statico non viene rigenerato automaticamente.
+Il repository del sito pubblico esegue una build statica pianificata ogni cinque minuti, oltre che a ogni push e avvio manuale. Pubblicazioni e ritiri diventano quindi visibili senza esporre chiavi amministrative nel browser.
+
+### Richieste dal sito pubblico
+
+Il modulo pubblico usa la Edge Function `submit-inquiry`, presente in `supabase/functions/submit-inquiry`. La funzione è anonima soltanto come endpoint: valida l’origine, applica controlli antispam essenziali, verifica formato e firma delle immagini e usa la `service_role` esclusivamente nell’ambiente server gestito da Supabase. Non inserire mai quella chiave nel frontend o nei repository secrets di build.
+
+Distribuzione nel progetto Supabase collegato:
+
+```bash
+supabase functions deploy submit-inquiry
+```
+
+Per aggiungere in futuro un dominio pubblico diverso da GitHub Pages, configurare il secret `PUBLIC_SITE_ORIGINS` della funzione con una lista di origini separate da virgole.
 
 ## Variabili locali
 
@@ -220,7 +232,7 @@ Le modifiche alla scheda commessa vengono accodate e salvate in ordine. Cambiand
 - **Fase 1:** implementata e mantenuta.
 - **Fase 2:** implementata.
 - **Fase 3:** implementata; la migrazione `003_phase3_management.sql` è stata applicata al progetto Supabase configurato.
-- **Sito:** interfaccia editoriale implementata localmente; la migrazione 004 non è ancora stata applicata perché il progetto Free non dispone di un backup recuperabile.
+- **Sito:** interfaccia editoriale attiva; la migrazione 004 è applicata e il primo owner LuLab è configurato.
 - **GitHub Pages:** pubblicazione del gestionale configurata nel repository dedicato.
 
 Nessuna modifica al database o al repository remoto viene effettuata dalle normali verifiche locali.

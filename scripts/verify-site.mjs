@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
-const [migration, securityTest, app, shell, sitePage, editorPage, siteLib] = await Promise.all([
+const [migration, securityTest, app, shell, sitePage, editorPage, siteLib, inquiryFunction] = await Promise.all([
   readFile(new URL('../supabase/migrations/004_public_site.sql', import.meta.url), 'utf8'),
   readFile(new URL('../supabase/tests/004_public_site_security.sql', import.meta.url), 'utf8'),
   readFile(new URL('../src/App.tsx', import.meta.url), 'utf8'),
   readFile(new URL('../src/components/AppShell.tsx', import.meta.url), 'utf8'),
   readFile(new URL('../src/pages/SitePage.tsx', import.meta.url), 'utf8'),
   readFile(new URL('../src/pages/SiteContentEditorPage.tsx', import.meta.url), 'utf8'),
-  readFile(new URL('../src/lib/site.ts', import.meta.url), 'utf8')
+  readFile(new URL('../src/lib/site.ts', import.meta.url), 'utf8'),
+  readFile(new URL('../supabase/functions/submit-inquiry/index.ts', import.meta.url), 'utf8')
 ])
 
 for (const table of [
@@ -50,7 +51,7 @@ assert.match(sitePage, /show_price: false/)
 assert.match(sitePage, /public_price: null/)
 assert.match(sitePage, /customer_inquiry_files/)
 assert.match(editorPage, /changeSitePublication/)
-assert.match(editorPage, /requestSiteRebuild/)
+assert.match(editorPage, /si aggiornerà automaticamente entro pochi minuti/)
 assert.match(siteLib, /optimizeSiteImage/)
 assert.match(siteLib, /from\('site-drafts'\)/)
 assert.match(siteLib, /targetBucket === 'site-public'/)
@@ -61,3 +62,9 @@ console.log('Navigazione ed editor Sito: OK')
 console.log('Prezzi pubblici disattivati: OK')
 console.log('Ciclo immagini bozza/pubblicazione/ritiro: OK')
 console.log('Richieste e allegati privati: OK')
+assert.match(inquiryFunction, /SUPABASE_SERVICE_ROLE_KEY/)
+assert.match(inquiryFunction, /allowedOrigins/)
+assert.match(inquiryFunction, /hasValidSignature/)
+assert.match(inquiryFunction, /MAX_REQUESTS_PER_WINDOW/)
+assert.match(inquiryFunction, /form_started_at/)
+console.log('Edge Function richieste: origine, file e antispam OK')

@@ -20,7 +20,6 @@ import {
   changeSitePublication,
   deleteSiteImage,
   isPublicSiteUnavailable,
-  requestSiteRebuild,
   uploadSiteImages,
   withSiteImageUrls,
   type SiteContentKind,
@@ -226,10 +225,9 @@ export function SiteContentEditorPage() {
     setMessage('')
     try {
       await changeSitePublication({ kind, parentId: content.id, images, nextStatus: next })
-      const rebuildRequested = await requestSiteRebuild(next === 'pubblicato' ? 'publish' : 'withdraw', content.id)
       setMessage(next === 'pubblicato'
-        ? rebuildRequested ? 'Pubblicato. È stato richiesto l’aggiornamento del sito.' : 'Pubblicato su Supabase. La rigenerazione automatica del sito deve ancora essere collegata.'
-        : rebuildRequested ? 'Ritirato. È stato richiesto l’aggiornamento del sito.' : 'Ritirato da Supabase. La rigenerazione automatica del sito deve ancora essere collegata.')
+        ? 'Pubblicato su Supabase. Il sito pubblico si aggiornerà automaticamente entro pochi minuti.'
+        : 'Ritirato da Supabase. Il sito pubblico si aggiornerà automaticamente entro pochi minuti.')
       await load()
     } catch (publicationError) {
       setError(readableError(publicationError))

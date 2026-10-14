@@ -19,7 +19,6 @@ export function isPublicSiteUnavailable(error: unknown) {
   const message = 'message' in error ? String(error.message).toLowerCase() : ''
   return code === '42P01' || code === 'PGRST202' || code === 'PGRST205' || message.includes('schema cache') || message.includes('does not exist')
 }
-
 export function makeSiteSlug(value: string) {
   const base = value
     .normalize('NFD')
@@ -56,7 +55,6 @@ async function decodeImage(file: File) {
     URL.revokeObjectURL(url)
   }
 }
-
 export async function optimizeSiteImage(file: File) {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
     throw new Error('Usa una fotografia JPG, PNG o WebP.')
@@ -236,10 +234,4 @@ export async function deleteSiteImage(kind: SiteContentKind, image: SiteImage) {
     if (restoreError) throw new Error(`File non rimosso e metadati non ripristinati: ${readableError(storageError)}`)
     throw new Error(readableError(storageError))
   }
-}
-
-export async function requestSiteRebuild(reason: string, contentId: string) {
-  if (!supabase) return false
-  const { error } = await supabase.functions.invoke('site-rebuild', { body: { reason, content_id: contentId } })
-  return !error
 }
