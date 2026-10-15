@@ -25,6 +25,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       includeAssets: [
         'brand/logo-lulab.png',
@@ -52,9 +55,8 @@ export default defineConfig({
           { src: `${githubPagesBase}icons/maskable-512x512.png`, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ]
       },
-      workbox: {
-        navigateFallback: `${githubPagesBase}index.html`,
-        globPatterns: ['**/*.{js,css,html,svg,woff2}']
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,svg,woff2,png}']
       }
     })
   ]
