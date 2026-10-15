@@ -30,29 +30,29 @@ export default defineConfig({
       filename: 'sw.ts',
       registerType: 'autoUpdate',
       includeAssets: [
-        'brand/logo-lulab.png',
-        'icons/favicon-16x16.png',
-        'icons/favicon-32x32.png',
-        'icons/icon-64x64.png',
-        'icons/apple-touch-icon.png',
-        'icons/pwa-192x192.png',
-        'icons/pwa-512x512.png',
-        'icons/maskable-512x512.png'
+        'brand/lulab-desk-monogram-v2.png',
+        'icons/favicon-16x16-v2.png',
+        'icons/favicon-32x32-v2.png',
+        'icons/icon-64x64-v2.png',
+        'icons/apple-touch-icon-v2.png',
+        'icons/pwa-192x192-v2.png',
+        'icons/pwa-512x512-v2.png',
+        'icons/maskable-512x512-v2.png'
       ],
       manifest: {
         name: 'LuLab Desk',
         short_name: 'LuLab',
         description: 'Gestionale semplice per il laboratorio LuLab',
-        theme_color: '#1f4938',
-        background_color: '#f4f1ea',
+        theme_color: '#000000',
+        background_color: '#000000',
         display: 'standalone',
         start_url: githubPagesBase,
         scope: githubPagesBase,
         lang: 'it',
         icons: [
-          { src: `${githubPagesBase}icons/pwa-192x192.png`, sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: `${githubPagesBase}icons/pwa-512x512.png`, sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: `${githubPagesBase}icons/maskable-512x512.png`, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+          { src: `${githubPagesBase}icons/pwa-192x192-v2.png`, sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: `${githubPagesBase}icons/pwa-512x512-v2.png`, sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: `${githubPagesBase}icons/maskable-512x512-v2.png`, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ]
       },
       injectManifest: {

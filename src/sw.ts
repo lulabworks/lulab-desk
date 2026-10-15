@@ -19,7 +19,7 @@ self.addEventListener('push', (event) => {
   const scopeUrl = new URL(self.registration.scope)
   const target = new URL(payload.path.replace(/^\/+/, ''), scopeUrl)
   if (target.origin !== scopeUrl.origin || !target.pathname.startsWith(scopeUrl.pathname)) return
-  const icon = new URL('icons/pwa-192x192.png', scopeUrl).toString()
+  const icon = new URL('icons/pwa-192x192-v2.png', scopeUrl).toString()
   const options = {
     body: payload.body,
     icon,

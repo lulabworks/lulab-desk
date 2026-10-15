@@ -128,7 +128,7 @@ La chiave deve essere una **Publishable key**, mai una Secret key. `.env.local` 
 
 ## Identità visiva e PWA
 
-Il marchio ufficiale è conservato in `public/brand/logo-lulab-original.png`; la versione ottimizzata usata dall’interfaccia e dai PDF è `public/brand/logo-lulab.png`. Nome, nome dell’applicazione, email e percorso del logo sono centralizzati in `src/lib/brand.ts`.
+Il monogramma bianco su nero allegato come identità di LuLab Desk è conservato in `public/brand/lulab-desk-monogram-v2.png` e riutilizzato senza ridisegni nell’interfaccia e nei PDF. Le icone browser, Apple, PWA, maskable e push sono varianti ridimensionate dello stesso PNG. Nome, nome dell’applicazione, email e percorso del logo sono centralizzati in `src/lib/brand.ts`.
 
 Le icone PWA sono generate proporzionalmente dal PNG ufficiale, senza deformazioni o tagli:
 

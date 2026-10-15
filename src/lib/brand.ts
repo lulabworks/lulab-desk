@@ -5,5 +5,5 @@ export const BRAND = {
   appName: 'LuLab Desk',
   email: 'lulabworks@gmail.com',
   tagline: 'Il laboratorio, in ordine',
-  logo: appPath('brand/logo-lulab.png')
+  logo: appPath('brand/lulab-desk-monogram-v2.png')
 } as const
