@@ -6,6 +6,7 @@ import { isPhase3Unavailable } from '../lib/phase3'
 import { isPublicSiteUnavailable } from '../lib/site'
 import { useAuth } from '../contexts/AuthContext'
 import { recordSuccessfulOperation } from '../lib/adaptive/usage'
+import { PushNotificationSettings } from '../components/PushNotificationSettings'
 
 export function MorePage() {
   const { user } = useAuth()
@@ -90,6 +91,7 @@ export function MorePage() {
           <Button className="mt-5" variant="secondary" onClick={exportData} loading={exporting}><Download size={17} /> Esporta JSON</Button>
         </Panel>
       </div>
+      <div className="mt-6"><PushNotificationSettings /></div>
     </div>
   )
 }

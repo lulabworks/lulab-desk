@@ -14,7 +14,7 @@ import {
   Sparkles
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button, EmptyState, Field, Input, Modal, ModalPresence, Notice, PageHeader, Panel, Select, Textarea } from '../components/ui'
 import { formatDate } from '../lib/format'
 import { isPublicSiteUnavailable, makeSiteSlug, withSiteImageUrls } from '../lib/site'
@@ -47,6 +47,7 @@ const areaOptions: Array<{ value: Area; label: string; icon: typeof PackageOpen 
 export function SitePage() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [area, setArea] = useState<Area>('collection')
   const [collection, setCollection] = useState<SiteCollectionItem[]>([])
   const [projects, setProjects] = useState<SitePortfolioProject[]>([])
@@ -117,6 +118,15 @@ export function SitePage() {
   }
 
   useEffect(() => { void load() }, [])
+
+  useEffect(() => {
+    const inquiryId = searchParams.get('richiesta')
+    if (!inquiryId || loading) return
+    setArea('inquiries')
+    const inquiry = inquiries.find((item) => item.id === inquiryId)
+    if (inquiry && selectedInquiry?.id !== inquiry.id) void openInquiry(inquiry)
+    else if (!inquiry && editor) setError('La richiesta non è disponibile per questo account.')
+  }, [editor, inquiries, loading, searchParams, selectedInquiry?.id])
 
   const filteredCollection = useMemo(() => collection.filter((item) => `${item.title} ${item.description}`.toLocaleLowerCase('it').includes(query.toLocaleLowerCase('it'))), [collection, query])
   const filteredProjects = useMemo(() => projects.filter((item) => `${item.title} ${item.summary} ${item.category}`.toLocaleLowerCase('it').includes(query.toLocaleLowerCase('it'))), [projects, query])
@@ -253,12 +263,12 @@ export function SitePage() {
       <Button type="submit" loading={saving}>Crea e continua</Button>
     </form></Modal>}</ModalPresence>
 
-    <ModalPresence>{selectedInquiry && <Modal title={selectedInquiry.reference_code} onClose={() => setSelectedInquiry(null)}><div className="grid gap-5">
-      <div><p className="type-card-title">{selectedInquiry.customer_name}</p><p className="mt-1 text-sm text-muted">{selectedInquiry.request_type} · {formatDate(selectedInquiry.submitted_at)}</p></div>
-      <div className="flex flex-wrap gap-2">{selectedInquiry.email && <a href={`mailto:${selectedInquiry.email}`} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-white px-3.5 text-sm font-semibold text-brand"><Mail size={16} /> {selectedInquiry.email}</a>}{selectedInquiry.phone && <a href={`tel:${selectedInquiry.phone}`} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-white px-3.5 text-sm font-semibold text-brand"><Phone size={16} /> {selectedInquiry.phone}</a>}</div>
-      <Panel className="shadow-none"><p className="whitespace-pre-wrap text-sm leading-6">{selectedInquiry.message}</p></Panel>
+    <ModalPresence>{selectedInquiry && <Modal title={selectedInquiry.customer_name} subtitle={`Richiesta ${selectedInquiry.reference_code}`} onClose={() => { setSelectedInquiry(null); if (searchParams.has('richiesta')) { const next = new URLSearchParams(searchParams); next.delete('richiesta'); setSearchParams(next, { replace: true }) } }}><div className="grid min-w-0 gap-3">
+      <p className="text-sm leading-5 text-muted">{selectedInquiry.request_type} · {formatDate(selectedInquiry.submitted_at)}</p>
+      <div className="flex min-w-0 flex-wrap gap-2">{selectedInquiry.email && <a href={`mailto:${selectedInquiry.email}`} className="inline-flex min-h-11 min-w-0 max-w-full items-center gap-2 rounded-xl border border-line bg-white px-3 text-sm font-medium text-brand"><Mail className="shrink-0" size={16} /><span className="min-w-0 break-all">{selectedInquiry.email}</span></a>}{selectedInquiry.phone && <a href={`tel:${selectedInquiry.phone}`} className="inline-flex min-h-11 min-w-0 max-w-full items-center gap-2 rounded-xl border border-line bg-white px-3 text-sm font-medium text-brand"><Phone className="shrink-0" size={16} /><span className="break-words">{selectedInquiry.phone}</span></a>}</div>
+      <div className="min-w-0 rounded-xl border border-line bg-white p-3.5"><p className="whitespace-pre-wrap break-words text-base leading-6">{selectedInquiry.message}</p></div>
       <Field label="Stato"><Select disabled={saving} value={selectedInquiry.status} onChange={(event) => void updateInquiryStatus(event.target.value as CustomerInquiryStatus)}>{CUSTOMER_INQUIRY_STATUSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</Select></Field>
-      {inquiryFiles.length > 0 && <div><p className="mb-3 text-sm font-semibold">Fotografie allegate</p><div className="grid grid-cols-2 gap-3">{inquiryFiles.map((file) => <a key={file.id} href={file.signed_url} target="_blank" rel="noreferrer" className="group relative aspect-square overflow-hidden rounded-xl bg-stone-100">{file.signed_url ? <img src={file.signed_url} alt={file.file_name} className="h-full w-full object-cover" /> : <FileImage className="m-auto text-stone-400" />}<ExternalLink className="absolute right-2 top-2 rounded-lg bg-white/90 p-1.5 text-brand" size={28} /></a>)}</div></div>}
+      {inquiryFiles.length > 0 && <div><p className="mb-2 type-card-title">Fotografie allegate</p><div className="grid grid-cols-2 gap-2">{inquiryFiles.map((file) => <a key={file.id} href={file.signed_url} target="_blank" rel="noreferrer" className="group relative aspect-square overflow-hidden rounded-xl bg-stone-100">{file.signed_url ? <img src={file.signed_url} alt={file.file_name} className="h-full w-full object-cover" /> : <FileImage className="m-auto text-stone-400" />}<ExternalLink className="absolute right-2 top-2 rounded-lg bg-white/90 p-1.5 text-brand" size={28} /></a>)}</div></div>}
     </div></Modal>}</ModalPresence>
   </div>
 }

@@ -12,7 +12,9 @@
     "test:phase3": "node scripts/verify-phase3.mjs",
     "test:site": "node scripts/verify-site.mjs",
     "test:adaptive": "node scripts/verify-adaptive.mjs",
-    "test": "pnpm test:phase3 && pnpm test:site && pnpm test:adaptive"
+    "test:push": "node scripts/verify-push.mjs",
+    "test:mobile-ui": "node scripts/verify-mobile-ui.mjs",
+    "test": "pnpm test:phase3 && pnpm test:site && pnpm test:adaptive && pnpm test:push && pnpm test:mobile-ui"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
@@ -34,6 +36,9 @@
     "tailwindcss": "^4.0.0",
     "typescript": "~5.7.2",
     "vite": "^6.0.5",
-    "vite-plugin-pwa": "^0.21.1"
+    "vite-plugin-pwa": "^0.21.1",
+    "workbox-core": "7.4.1",
+    "workbox-precaching": "7.4.1",
+    "workbox-routing": "7.4.1"
   }
 }

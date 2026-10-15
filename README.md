@@ -99,6 +99,10 @@ I prezzi pubblici restano disattivati: l’interfaccia salva sempre `show_price=
 
 Il repository del sito pubblico esegue una build statica pianificata ogni cinque minuti, oltre che a ogni push e avvio manuale. Pubblicazioni e ritiri diventano quindi visibili senza esporre chiavi amministrative nel browser.
 
+## Notifiche Web Push (preparazione locale)
+
+La migrazione additiva `supabase/migrations/006_web_push_notifications.sql`, le Edge Functions e il frontend per le notifiche Web Push sono predisposti localmente. Non applicare la migrazione né distribuire le funzioni senza un backup e un collaudo su ambiente isolato. L'attivazione richiede una coppia VAPID, secrets Edge Functions, la variabile Actions `VITE_VAPID_PUBLIC_KEY` e un cron server-side; i passaggi e i limiti sono descritti in [docs/NOTIFICHE-PUSH.md](docs/NOTIFICHE-PUSH.md). Lo script `supabase/schedules/006_push_dispatch.sql` contiene solo i nomi dei secrets Vault, non i relativi valori. Nessun secret privato è presente nel frontend.
+
 ### Richieste dal sito pubblico
 
 Il modulo pubblico usa la Edge Function `submit-inquiry`, presente in `supabase/functions/submit-inquiry`. La funzione è anonima soltanto come endpoint: valida l’origine, applica controlli antispam essenziali, verifica formato e firma delle immagini e usa la `service_role` esclusivamente nell’ambiente server gestito da Supabase. Non inserire mai quella chiave nel frontend o nei repository secrets di build.

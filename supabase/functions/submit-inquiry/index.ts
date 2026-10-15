@@ -150,6 +150,23 @@ Deno.serve(async (request) => {
       return json(origin, { error: 'Non è stato possibile salvare gli allegati. Nessun dato è stato conservato.' }, 500)
     }
 
+    // L'outbox viene popolata soltanto dopo che richiesta, tutti gli allegati e
+    // i relativi metadati sono stati salvati. La push non è critica per l'invio:
+    // un errore di notifica non annulla una richiesta già registrata.
+    const { error: notificationError } = await supabase.from('push_notification_jobs').insert({
+      category: 'site_inquiry',
+      source_kind: 'site_inquiry',
+      source_id: inquiry.id,
+      source_marker: 'completed',
+      recipient_user_id: null,
+      dedupe_key: `site-inquiry:${inquiry.id}`,
+      title: 'Nuova richiesta dal sito',
+      body: 'È arrivata una nuova richiesta da esaminare.',
+      target_path: `/sito?richiesta=${encodeURIComponent(inquiry.id)}`,
+      scheduled_for: new Date().toISOString()
+    })
+    if (notificationError) console.error('Could not enqueue inquiry notification', inquiry.id)
+
     return json(origin, { ok: true, reference_code: inquiry.reference_code }, 201)
   } catch {
     return json(origin, { error: 'Richiesta non valida.' }, 400)

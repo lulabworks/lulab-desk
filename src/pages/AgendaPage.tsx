@@ -1,8 +1,8 @@
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, parseISO, startOfMonth, startOfWeek, subMonths } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, List, MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useId, useMemo, useState, type FormEvent } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Button, EmptyState, Field, Input, Modal, ModalPresence, Notice, PageHeader, Panel, Select, Textarea } from '../components/ui'
 import { isPhase2Unavailable } from '../lib/phase2'
 import { readableError, supabase } from '../lib/supabase'
@@ -15,6 +15,7 @@ const emptyForm = (): EventForm => ({ title: '', event_type: 'appuntamento', job
 
 export function AgendaPage() {
   const { user } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [events, setEvents] = useState<AgendaEvent[]>([])
   const [jobs, setJobs] = useState<Job[]>([])
   const [month, setMonth] = useState(startOfMonth(new Date()))
@@ -25,6 +26,8 @@ export function AgendaPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [unavailable, setUnavailable] = useState(false)
+  const eventFormId = useId()
+  const selectedJob = jobs.find((job) => job.id === form.job_id)
 
   useEffect(() => {
     async function load() {
@@ -59,6 +62,19 @@ export function AgendaPage() {
     setForm({ title: event.title, event_type: event.event_type, job_id: event.job_id ?? '', date: format(start, 'yyyy-MM-dd'), start_time: format(start, 'HH:mm'), end_time: end ? format(end, 'HH:mm') : '', all_day: event.all_day, location: event.location ?? '', notes: event.notes ?? '' })
     setEditing(event)
   }
+
+  useEffect(() => {
+    const eventId = searchParams.get('evento')
+    if (!eventId || (editing && editing !== 'new')) return
+    const event = events.find((item) => item.id === eventId)
+    if (!event) return
+    setView('list')
+    setSelectedDay(parseISO(event.starts_at))
+    openEdit(event)
+    const next = new URLSearchParams(searchParams)
+    next.delete('evento')
+    setSearchParams(next, { replace: true })
+  }, [editing, events, searchParams, setSearchParams])
 
   async function saveEvent(event: FormEvent) {
     event.preventDefault()
@@ -103,7 +119,26 @@ export function AgendaPage() {
       {view === 'calendar' ? <CalendarGrid month={month} days={calendarDays} events={events} onPrevious={() => setMonth(subMonths(month, 1))} onNext={() => setMonth(addMonths(month, 1))} onSelect={(day) => { setSelectedDay(day); if (window.innerWidth < 640) setView('list') }} onCreate={openNew} /> : <EventList events={visibleEvents} onEdit={openEdit} onToggle={toggleComplete} onNew={() => openNew(selectedDay ?? undefined)} />}
       {view === 'calendar' && selectedDay && <div className="mt-5"><EventList events={visibleEvents} onEdit={openEdit} onToggle={toggleComplete} onNew={() => openNew(selectedDay)} title={format(selectedDay, 'EEEE d MMMM', { locale: it })} /></div>}
     </>}
-    <ModalPresence>{editing && <Modal title={editing === 'new' ? 'Nuovo evento' : 'Modifica evento'} onClose={() => setEditing(null)}><form className="grid gap-4" onSubmit={saveEvent}><Field label="Titolo"><Input required minLength={2} value={form.title} onChange={(e) => setForm((current) => ({ ...current, title: e.target.value }))} /></Field><div className="grid gap-4 sm:grid-cols-2"><Field label="Tipo"><Select value={form.event_type} onChange={(e) => setForm((current) => ({ ...current, event_type: e.target.value as AgendaEventType }))}>{EVENT_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</Select></Field><Field label="Commessa"><Select value={form.job_id} onChange={(e) => setForm((current) => ({ ...current, job_id: e.target.value }))}><option value="">Nessuna commessa</option>{jobs.map((job) => <option key={job.id} value={job.id}>{job.code} · {job.title}</option>)}</Select></Field></div><Field label="Data"><Input required type="date" value={form.date} onChange={(e) => setForm((current) => ({ ...current, date: e.target.value }))} /></Field><label className="flex min-h-11 items-center gap-3 rounded-xl border border-line bg-white px-3.5 text-sm font-medium"><input type="checkbox" checked={form.all_day} onChange={(e) => setForm((current) => ({ ...current, all_day: e.target.checked }))} /> Tutto il giorno</label>{!form.all_day && <div className="grid grid-cols-2 gap-3"><Field label="Inizio"><Input required type="time" value={form.start_time} onChange={(e) => setForm((current) => ({ ...current, start_time: e.target.value }))} /></Field><Field label="Fine"><Input type="time" value={form.end_time} onChange={(e) => setForm((current) => ({ ...current, end_time: e.target.value }))} /></Field></div>}<Field label="Luogo"><Input value={form.location} onChange={(e) => setForm((current) => ({ ...current, location: e.target.value }))} /></Field><Field label="Note"><Textarea value={form.notes} onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} /></Field><div className="flex flex-wrap justify-between gap-2">{editing !== 'new' ? <Button type="button" variant="danger" onClick={() => deleteEvent(editing)}><Trash2 size={16} /> Elimina</Button> : <span />}<div className="flex gap-2"><Button type="button" variant="ghost" onClick={() => setEditing(null)}>Annulla</Button><Button type="submit" loading={saving}>Salva evento</Button></div></div></form></Modal>}</ModalPresence>
+    <ModalPresence>{editing && <Modal
+      title={editing === 'new' ? 'Nuovo evento' : 'Modifica evento'}
+      onClose={() => setEditing(null)}
+      footer={<div className={`grid gap-2 sm:flex sm:items-center sm:justify-end ${editing === 'new' ? 'grid-cols-2' : 'grid-cols-3'}`}>
+        {editing !== 'new' && <Button type="button" variant="danger" className="min-w-0 px-3! sm:mr-auto sm:px-4!" onClick={() => deleteEvent(editing)}><Trash2 className="hidden sm:block" size={16} />Elimina</Button>}
+        <Button type="button" variant="ghost" className="min-w-0 px-3! sm:px-4!" onClick={() => setEditing(null)}>Annulla</Button>
+        <Button type="submit" form={eventFormId} className="min-w-0 px-3! sm:px-4!" loading={saving}><span className="sm:hidden">Salva</span><span className="hidden sm:inline">Salva evento</span></Button>
+      </div>}
+    ><form id={eventFormId} className="grid min-w-0 gap-3 sm:gap-4" onSubmit={saveEvent}>
+      <Field label="Titolo"><Input required minLength={2} value={form.title} onChange={(e) => setForm((current) => ({ ...current, title: e.target.value }))} /></Field>
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+        <Field label="Tipo"><Select value={form.event_type} onChange={(e) => setForm((current) => ({ ...current, event_type: e.target.value as AgendaEventType }))}>{EVENT_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</Select></Field>
+        <Field label="Commessa" hint={selectedJob ? `${selectedJob.code} · ${selectedJob.title}` : undefined}><Select value={form.job_id} onChange={(e) => setForm((current) => ({ ...current, job_id: e.target.value }))}><option value="">Nessuna commessa</option>{jobs.map((job) => <option key={job.id} value={job.id}>{job.code} · {job.title}</option>)}</Select></Field>
+      </div>
+      <Field label="Data"><Input required type="date" value={form.date} onChange={(e) => setForm((current) => ({ ...current, date: e.target.value }))} /></Field>
+      <label className="flex min-h-11 items-center gap-3 rounded-xl border border-line bg-white px-3.5 text-sm font-medium"><input type="checkbox" checked={form.all_day} onChange={(e) => setForm((current) => ({ ...current, all_day: e.target.checked }))} /> Tutto il giorno</label>
+      {!form.all_day && <div className="grid min-w-0 grid-cols-2 gap-3"><Field label="Inizio"><Input required type="time" value={form.start_time} onChange={(e) => setForm((current) => ({ ...current, start_time: e.target.value }))} /></Field><Field label="Fine"><Input type="time" value={form.end_time} onChange={(e) => setForm((current) => ({ ...current, end_time: e.target.value }))} /></Field></div>}
+      <Field label="Luogo"><Input value={form.location} onChange={(e) => setForm((current) => ({ ...current, location: e.target.value }))} /></Field>
+      <Field label="Note"><Textarea className="min-h-20!" rows={2} value={form.notes} onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} /></Field>
+    </form></Modal>}</ModalPresence>
   </div>
 }
 

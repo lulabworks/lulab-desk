@@ -1,6 +1,6 @@
 import { CalendarPlus, CircleDollarSign, Plus, ShieldCheck, Truck } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Button, EmptyState, Field, Input, Modal, ModalPresence, Notice, PageHeader, Panel, Select, Textarea } from '../components/ui'
 import { formatDate, money, todayIso } from '../lib/format'
 import { laborValue, isPhase3Unavailable } from '../lib/phase3'
@@ -13,6 +13,7 @@ const blank = () => ({ job_id: '', customer_id: '', recovered_item_id: '', colla
 
 export function AntitarloPage() {
   const { user } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [treatments, setTreatments] = useState<AntitarloTreatment[]>([]); const [jobs, setJobs] = useState<Job[]>([]); const [customers, setCustomers] = useState<Customer[]>([]); const [recoveries, setRecoveries] = useState<RecoveredItem[]>([]); const [collaborators, setCollaborators] = useState<ExternalCollaborator[]>([])
   const [expenses, setExpenses] = useState<JobExpense[]>([]); const [payments, setPayments] = useState<JobPayment[]>([]); const [times, setTimes] = useState<TimeEntry[]>([])
   const [selected, setSelected] = useState<AntitarloTreatment | null>(null); const [dialog, setDialog] = useState<'treatment' | 'expense' | 'payment' | 'collaborator' | 'agenda' | null>(null); const [form, setForm] = useState(blank)
@@ -29,6 +30,17 @@ export function AntitarloPage() {
     setSelected((current) => current ? ((treatmentResult.data ?? []).find((entry) => entry.id === current.id) as AntitarloTreatment ?? null) : null)
   }
   useEffect(() => { load() }, [])
+  useEffect(() => {
+    const treatmentId = searchParams.get('trattamento')
+    if (!treatmentId || !treatments.length || selected?.id === treatmentId) return
+    const treatment = treatments.find((item) => item.id === treatmentId)
+    if (treatment) {
+      setSelected(treatment)
+      const next = new URLSearchParams(searchParams)
+      next.delete('trattamento')
+      setSearchParams(next, { replace: true })
+    } else setError('Il trattamento non è disponibile per questo account.')
+  }, [searchParams, selected?.id, setSearchParams, treatments])
   function openTreatment(item?: AntitarloTreatment) { setSelected(item ?? null); setForm(item ? { job_id: item.job_id, customer_id: item.customer_id ?? '', recovered_item_id: item.recovered_item_id ?? '', collaborator_id: item.collaborator_id ?? '', furniture_description: item.furniture_description, pickup_date: item.pickup_date ?? '', collaborator_delivery_date: item.collaborator_delivery_date ?? '', expected_return_date: item.expected_return_date ?? '', customer_redelivery_date: item.customer_redelivery_date ?? '', status: item.status, notes: item.notes ?? '' } : blank()); setDialog('treatment') }
   async function saveTreatment(event: FormEvent) {
     event.preventDefault(); if (!supabase) return; setSaving(true)
@@ -53,5 +65,5 @@ export function AntitarloPage() {
   </div>
 }
 
-function DateBox({ label, value }: { label: string; value: string | null }) { return <div className="rounded-xl bg-stone-50 p-3"><p className="text-[13px] font-medium text-muted">{label}</p><p className="mt-1 font-semibold">{formatDate(value, '—')}</p></div> }
+function DateBox({ label, value }: { label: string; value: string | null }) { return <div className="min-w-0 rounded-xl bg-stone-50 p-3"><p className="break-words text-[13px] font-medium leading-5 text-muted">{label}</p><p className="mt-1 font-semibold">{formatDate(value, '—')}</p></div> }
 function MoneyRow({ label, value }: { label: string; value: number }) { return <div className="flex justify-between gap-3"><span className="text-muted">{label}</span><strong className={value < 0 ? 'text-red-700' : ''}>{money.format(value)}</strong></div> }

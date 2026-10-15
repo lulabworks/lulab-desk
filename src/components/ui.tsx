@@ -1,10 +1,9 @@
 import { LoaderCircle, X } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion, type HTMLMotionProps } from 'motion/react'
-import { useEffect, useId, useRef, useState, type InputHTMLAttributes, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type InputHTMLAttributes, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
 import { createPortal } from 'react-dom'
 import { sheetSpring, tapSpring } from '../lib/animations'
-
-type ModalViewport = { top: number; left: number; width: number; height: number }
+import { modalFieldScrollDelta, modalViewportSnapshot, type ModalViewport } from '../lib/modalViewport'
 
 type ModalLockSnapshot = {
   scrollY: number
@@ -27,13 +26,7 @@ let restoreFocusFrame = 0
 
 function readModalViewport(): ModalViewport {
   if (typeof window === 'undefined') return { top: 0, left: 0, width: 0, height: 0 }
-  const viewport = window.visualViewport
-  return {
-    top: viewport?.offsetTop ?? 0,
-    left: viewport?.offsetLeft ?? 0,
-    width: viewport?.width ?? window.innerWidth,
-    height: viewport?.height ?? window.innerHeight
-  }
+  return modalViewportSnapshot(window.visualViewport, { width: window.innerWidth, height: window.innerHeight })
 }
 
 function lockPageForModal(restoreFocus: HTMLElement | null) {
@@ -139,23 +132,23 @@ export function Button({
 
 export function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: ReactNode }) {
   return (
-    <label className="grid gap-1.5 text-sm font-medium text-ink">
+      <label className="grid min-w-0 gap-1.5 text-sm font-medium text-ink">
       <span>{label}</span>
       {children}
-      {error ? <span className="text-xs text-red-700">{error}</span> : hint ? <span className="text-xs font-normal text-muted">{hint}</span> : null}
+      {error ? <span className="break-words text-xs text-red-700">{error}</span> : hint ? <span className="break-words text-xs font-normal leading-5 text-muted">{hint}</span> : null}
     </label>
   )
 }
 
 const fieldClass =
-  'min-h-11 w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-stone-400 focus:border-brand focus:ring-3 focus:ring-brand/10'
+  'box-border min-h-11 min-w-0 w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-stone-400 focus:border-brand focus:ring-3 focus:ring-brand/10'
 
 export function Input({ className = '', ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={`${fieldClass} ${className}`} {...props} />
 }
 
 export function Select({ className = '', ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={`${fieldClass} ${className}`} {...props} />
+  return <select className={`${fieldClass} truncate pr-8! ${className}`} {...props} />
 }
 
 export function Textarea({ className = '', ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
@@ -183,11 +176,13 @@ export function ModalPresence({ children }: { children: ReactNode }) {
   return <AnimatePresence>{children}</AnimatePresence>
 }
 
-export function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
+export function Modal({ title, subtitle, footer, children, onClose }: { title: string; subtitle?: string; footer?: ReactNode; children: ReactNode; onClose: () => void }) {
   const reduceMotion = useReducedMotion()
   const [desktop, setDesktop] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 640px) and (hover: hover)').matches)
   const [viewport, setViewport] = useState(readModalViewport)
   const dialogRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const openingCompleteRef = useRef(false)
   const restoreFocusRef = useRef<HTMLElement | null>(typeof document !== 'undefined' && document.activeElement instanceof HTMLElement ? document.activeElement : null)
   const titleId = useId()
 
@@ -199,31 +194,51 @@ export function Modal({ title, children, onClose }: { title: string; children: R
     return () => media.removeEventListener('change', update)
   }, [])
 
+  function revealActiveField() {
+    const region = scrollRef.current
+    const active = document.activeElement
+    if (!openingCompleteRef.current || !region || !(active instanceof HTMLElement) || !region.contains(active) || !active.matches('input, select, textarea, [contenteditable="true"]')) return
+    const field = active.getBoundingClientRect()
+    const bounds = region.getBoundingClientRect()
+    const delta = modalFieldScrollDelta(field, bounds)
+    if (delta) region.scrollTo({ top: region.scrollTop + delta, behavior: 'auto' })
+  }
+
   useEffect(() => {
     const visualViewport = window.visualViewport
-    const update = () => setViewport(readModalViewport())
-    const updateAndRevealFocus = () => {
-      update()
-      requestAnimationFrame(() => {
-        const activeElement = document.activeElement
-        if (activeElement instanceof HTMLElement && dialogRef.current?.contains(activeElement)) {
-          activeElement.scrollIntoView({ block: 'nearest', inline: 'nearest' })
-        }
+    let viewportFrame = 0
+    let focusFrame = 0
+    const update = () => {
+      cancelAnimationFrame(viewportFrame)
+      cancelAnimationFrame(focusFrame)
+      viewportFrame = requestAnimationFrame(() => {
+        setViewport(readModalViewport())
+        // Wait for React to lay out the resized sheet before measuring a field.
+        focusFrame = requestAnimationFrame(revealActiveField)
       })
     }
+    const onVisibility = () => { if (document.visibilityState === 'visible') update() }
     update()
-    window.addEventListener('resize', updateAndRevealFocus)
-    visualViewport?.addEventListener('resize', updateAndRevealFocus)
+    window.addEventListener('resize', update)
+    window.addEventListener('pageshow', update)
+    document.addEventListener('visibilitychange', onVisibility)
+    visualViewport?.addEventListener('resize', update)
     visualViewport?.addEventListener('scroll', update)
     return () => {
-      window.removeEventListener('resize', updateAndRevealFocus)
-      visualViewport?.removeEventListener('resize', updateAndRevealFocus)
+      cancelAnimationFrame(viewportFrame)
+      cancelAnimationFrame(focusFrame)
+      window.removeEventListener('resize', update)
+      window.removeEventListener('pageshow', update)
+      document.removeEventListener('visibilitychange', onVisibility)
+      visualViewport?.removeEventListener('resize', update)
       visualViewport?.removeEventListener('scroll', update)
     }
   }, [])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     lockPageForModal(restoreFocusRef.current)
+    setViewport(readModalViewport())
+    if (scrollRef.current) scrollRef.current.scrollTop = 0
     const focusFrame = requestAnimationFrame(() => {
       const dialog = dialogRef.current
       if (!dialog || dialog.contains(document.activeElement)) return
@@ -293,21 +308,24 @@ export function Modal({ title, children, onClose }: { title: string; children: R
         aria-labelledby={titleId}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
+        onFocusCapture={() => { if (openingCompleteRef.current) requestAnimationFrame(revealActiveField) }}
+        onAnimationComplete={() => { openingCompleteRef.current = true; setViewport(readModalViewport()); requestAnimationFrame(revealActiveField) }}
         initial={panelInitial}
         animate={panelAnimate}
         exit={panelExit}
         transition={reduceMotion ? { duration: 0.1 } : sheetSpring}
         className={`relative z-10 flex max-h-full w-full flex-col overflow-hidden bg-canvas shadow-2xl outline-none ${desktop ? 'max-w-xl rounded-3xl' : 'rounded-t-3xl'}`}
       >
-        <div className={`z-10 flex shrink-0 items-center justify-between gap-4 bg-canvas ${desktop ? 'px-7 pb-5 pt-7' : 'px-5 pb-5 pt-5'}`}>
-          <h2 id={titleId} className="type-panel-title text-ink">{title}</h2>
+        <div className={`z-10 flex shrink-0 items-center justify-between gap-4 bg-canvas ${desktop ? 'px-7 pb-5 pt-7' : 'px-5 pb-3 pt-4'}`}>
+          <div className="min-w-0"><h2 id={titleId} className="type-panel-title break-words text-ink">{title}</h2>{subtitle && <p className="type-meta mt-1 break-words text-muted">{subtitle}</p>}</div>
           <motion.button type="button" whileTap={reduceMotion ? undefined : { scale: 0.94 }} transition={tapSpring} className="grid size-10 shrink-0 place-items-center rounded-full text-muted hover:bg-stone-200" onClick={onClose} aria-label="Chiudi">
             <X size={20} />
           </motion.button>
         </div>
-        <div className={`min-h-0 overflow-y-auto overscroll-contain touch-pan-y ${desktop ? 'px-7 pb-7' : 'px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]'}`} data-modal-scroll-region>
+        <div ref={scrollRef} className={`min-h-0 min-w-0 overflow-y-auto overscroll-contain touch-pan-y ${desktop ? 'px-7 pb-7' : footer ? 'px-5 pb-3' : 'px-5 pb-[calc(1rem+env(safe-area-inset-bottom))]'}`} data-modal-scroll-region>
           {children}
         </div>
+        {footer && <div className={`shrink-0 border-t border-line bg-canvas pt-3 ${desktop ? 'px-7 pb-6' : 'px-5 pb-[calc(1rem+env(safe-area-inset-bottom))]'}`} data-modal-footer>{footer}</div>}
       </motion.div>
     </motion.div>,
     document.body

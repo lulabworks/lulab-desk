@@ -1,2 +1,9 @@
 [functions.submit-inquiry]
 verify_jwt = false
+
+[functions.manage-push-subscription]
+verify_jwt = true
+
+[functions.dispatch-push-notifications]
+# La funzione verifica un segreto cron dedicato nel header X-Push-Cron-Secret.
+verify_jwt = false
