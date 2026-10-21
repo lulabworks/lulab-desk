@@ -14,7 +14,8 @@
     "test:adaptive": "node scripts/verify-adaptive.mjs",
     "test:push": "node scripts/verify-push.mjs",
     "test:mobile-ui": "node scripts/verify-mobile-ui.mjs",
-    "test": "pnpm test:phase3 && pnpm test:site && pnpm test:adaptive && pnpm test:push && pnpm test:mobile-ui"
+    "test:photo-inputs": "node scripts/verify-photo-inputs.mjs",
+    "test": "pnpm test:phase3 && pnpm test:site && pnpm test:adaptive && pnpm test:push && pnpm test:mobile-ui && pnpm test:photo-inputs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

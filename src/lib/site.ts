@@ -1,4 +1,5 @@
 import { readableError, supabase } from './supabase'
+import { getSupportedPhotoMimeType } from './photoUpload'
 import type {
   SiteCollectionImage,
   SitePortfolioImage,
@@ -49,7 +50,15 @@ async function decodeImage(file: File) {
     const image = new Image()
     image.decoding = 'async'
     image.src = url
-    await image.decode()
+    try {
+      await image.decode()
+    } catch (error) {
+      const mimeType = getSupportedPhotoMimeType(file)
+      if (mimeType === 'image/heic' || mimeType === 'image/heif') {
+        throw new Error('Il browser non riesce a leggere questa foto HEIC/HEIF. Su iPhone esportala da Foto scegliendo “Più compatibile”.')
+      }
+      throw error
+    }
     return image
   } finally {
     // L'URL resta necessario fino alla fine di decode(), poi i pixel sono disponibili.
@@ -57,8 +66,8 @@ async function decodeImage(file: File) {
   }
 }
 export async function optimizeSiteImage(file: File) {
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-    throw new Error('Usa una fotografia JPG, PNG o WebP.')
+  if (!getSupportedPhotoMimeType(file)) {
+    throw new Error('Usa una fotografia JPG, PNG, WebP o HEIC/HEIF da iPhone.')
   }
   if (file.size > MAX_SOURCE_SIZE) throw new Error('La fotografia supera il limite di 25 MB.')
 

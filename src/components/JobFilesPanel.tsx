@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { formatDate } from '../lib/format'
 import { isPhase2Unavailable } from '../lib/phase2'
+import { preparePhotoForUpload } from '../lib/photoUpload'
 import { readableError, supabase } from '../lib/supabase'
 import { FILE_CATEGORIES, type JobFile, type JobFileCategory } from '../lib/types'
 import { recordSuccessfulOperation } from '../lib/adaptive/usage'
@@ -42,18 +43,30 @@ export function JobFilesPanel({ jobId }: { jobId: string }) {
     if (!file || !supabase || !user) return
     setError('')
     if (file.size > MAX_SIZE) return setError('Il file supera il limite di 15 MB.')
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
-    if (!allowed.includes(file.type)) return setError('Formato non supportato. Usa JPG, PNG, WebP o PDF.')
-
     setUploading(true)
-    const safeName = file.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9._-]/g, '-').slice(-120)
+    let uploadFile = file
+    if (file.type === 'application/pdf') {
+      if (category !== 'documento') {
+        setUploading(false)
+        return setError('In questa categoria puoi caricare solo fotografie.')
+      }
+    } else {
+      try {
+        uploadFile = await preparePhotoForUpload(file, MAX_SIZE)
+      } catch (uploadError) {
+        setUploading(false)
+        return setError(uploadError instanceof Error ? uploadError.message : 'Non è stato possibile preparare la fotografia.')
+      }
+    }
+
+    const safeName = uploadFile.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9._-]/g, '-').slice(-120)
     const path = `${user.id}/${jobId}/${category}/${crypto.randomUUID()}-${safeName}`
-    const { error: storageError } = await supabase.storage.from('job-files').upload(path, file, { contentType: file.type, upsert: false })
+    const { error: storageError } = await supabase.storage.from('job-files').upload(path, uploadFile, { contentType: uploadFile.type, upsert: false })
     if (storageError) {
       setUploading(false)
       return setError(readableError(storageError))
     }
-    const { data, error: dbError } = await supabase.from('job_files').insert({ job_id: jobId, category, storage_path: path, file_name: file.name, mime_type: file.type, size_bytes: file.size }).select().single()
+    const { data, error: dbError } = await supabase.from('job_files').insert({ job_id: jobId, category, storage_path: path, file_name: uploadFile.name, mime_type: uploadFile.type, size_bytes: uploadFile.size }).select().single()
     if (dbError) {
       await supabase.storage.from('job-files').remove([path])
       setUploading(false)
@@ -81,7 +94,7 @@ export function JobFilesPanel({ jobId }: { jobId: string }) {
 
   return (
     <Panel>
-      <div className="mb-5 flex min-w-0 flex-wrap items-center justify-between gap-3"><div className="min-w-0"><p className="section-kicker">Archivio</p><h2 className="break-words type-panel-title">Foto e allegati</h2></div>{!unavailable && <label className={`inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white ${uploading ? 'pointer-events-none opacity-55' : ''}`}><Upload size={17} /> {uploading ? 'Caricamento…' : 'Carica file'}<input className="sr-only" type="file" accept={isPhotoCategory ? 'image/jpeg,image/png,image/webp' : 'image/jpeg,image/png,image/webp,application/pdf'} capture={isPhotoCategory ? 'environment' : undefined} onChange={(event) => { void upload(event.target.files, active); event.target.value = '' }} /></label>}</div>
+      <div className="mb-5 flex min-w-0 flex-wrap items-center justify-between gap-3"><div className="min-w-0"><p className="section-kicker">Archivio</p><h2 className="break-words type-panel-title">Foto e allegati</h2></div>{!unavailable && <label className={`inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white ${uploading ? 'pointer-events-none opacity-55' : ''}`}><Upload size={17} /> {uploading ? 'Caricamento…' : 'Carica file'}<input className="sr-only" type="file" accept={isPhotoCategory ? 'image/*' : 'image/*,application/pdf'} onChange={(event) => { void upload(event.target.files, active); event.target.value = '' }} /></label>}</div>
       {unavailable ? <Notice>Applica la migrazione <strong>002_phase2_operations.sql</strong> per attivare foto e allegati.</Notice> : <>
         <div className="mb-5 flex min-w-0 max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1">{FILE_CATEGORIES.map((category) => <button key={category.value} onClick={() => setActive(category.value)} className={`min-h-10 shrink-0 rounded-xl px-3.5 text-sm font-semibold ${active === category.value ? 'bg-brand text-white' : 'bg-stone-100 text-muted hover:text-ink'}`}>{category.label}<span className="ml-1.5 text-xs opacity-70">{files.filter((file) => file.category === category.value).length}</span></button>)}</div>
         {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
