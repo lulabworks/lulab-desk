@@ -70,6 +70,10 @@ Riferimenti: [backup database Supabase](https://supabase.com/docs/guides/platfor
 
 La migrazione non riscrive le migrazioni precedenti. Aggiunge i collegamenti antitarlo a spese, pagamenti e agenda e introduce il registro di magazzino append-only. Le giacenze possono cambiare esclusivamente tramite nuovi movimenti; ogni consumo salva il costo unitario del momento e ogni correzione viene registrata come storno. Materiali, commesse, recuperi e fornitori referenziati dallo storico non possono essere eliminati a cascata.
 
+## Scansione del magazzino
+
+Per la scansione del magazzino (migrazione incrementale 007, ordine di attivazione e collaudo locale), vedere [Magazzino e codici a barre](docs/MAGAZZINO-BARCODE.md). La migrazione va autorizzata e applicata prima di pubblicare il frontend che abilita la scansione.
+
 ## Gestione del sito pubblico
 
 La sezione **Sito** permette agli editor autorizzati di gestire:

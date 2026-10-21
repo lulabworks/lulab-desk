@@ -15,10 +15,14 @@
     "test:push": "node scripts/verify-push.mjs",
     "test:mobile-ui": "node scripts/verify-mobile-ui.mjs",
     "test:photo-inputs": "node scripts/verify-photo-inputs.mjs",
-    "test": "pnpm test:phase3 && pnpm test:site && pnpm test:adaptive && pnpm test:push && pnpm test:mobile-ui && pnpm test:photo-inputs"
+    "test:barcodes": "node scripts/verify-barcodes.mjs",
+    "test:barcodes:postgres": "bash scripts/test-material-barcodes-postgres.sh",
+    "test": "pnpm test:phase3 && pnpm test:site && pnpm test:adaptive && pnpm test:push && pnpm test:mobile-ui && pnpm test:photo-inputs && pnpm test:barcodes"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3",
     "date-fns": "^4.1.0",
     "jspdf": "^3.0.3",
     "lucide-react": "^0.468.0",

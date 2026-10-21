@@ -186,6 +186,7 @@ export interface JobPayment {
 export interface MaterialCategory { id: string; user_id: string; name: string; created_at: string }
 export interface Supplier { id: string; user_id: string; name: string; phone: string | null; email: string | null; address: string | null; notes: string | null; created_at: string; updated_at: string }
 export interface Material {
+  barcode: string | null
   id: string; user_id: string; category_id: string | null; supplier_id: string | null; code: string | null; name: string; unit: string; unit_price: number; quantity_available: number; minimum_stock: number; notes: string | null; is_active: boolean; created_at: string; updated_at: string
   category?: Pick<MaterialCategory, 'id' | 'name'> | null
   supplier?: Pick<Supplier, 'id' | 'name'> | null
