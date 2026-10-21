@@ -1,12 +1,30 @@
 import { defineConfig } from 'vite'
+// The Vite config runs in Node; this project intentionally does not install Node typings.
+// @ts-ignore -- Node's built-in module is available at config runtime.
+import { execFileSync } from 'node:child_process'
+import packageJson from './package.json'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 const githubPagesBase = '/lulab-desk/'
+const buildHash = (() => {
+  const runtimeProcess = (globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } }).process
+  const githubSha = runtimeProcess?.env?.GITHUB_SHA
+  if (githubSha && /^[\da-f]{7,40}$/i.test(githubSha)) return githubSha.slice(0, 7)
+  try {
+    return execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], { encoding: 'utf8' }).trim() || 'local'
+  } catch {
+    return 'local'
+  }
+})()
 
 export default defineConfig({
   base: githubPagesBase,
+  define: {
+    __APP_VERSION__: JSON.stringify(packageJson.version),
+    __APP_BUILD__: JSON.stringify(buildHash)
+  },
   build: {
     rollupOptions: {
       output: {

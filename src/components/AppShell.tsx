@@ -1,4 +1,4 @@
-import { Armchair, BarChart3, Boxes, CalendarDays, Globe2, Hammer, Home, Menu, MoreHorizontal, ShieldCheck, Users, X, LogOut } from 'lucide-react'
+import { Armchair, BarChart3, Boxes, CalendarDays, Globe2, Hammer, Home, Menu, Settings, ShieldCheck, Users, X, LogOut } from 'lucide-react'
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'motion/react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
@@ -19,7 +19,7 @@ const navigation = [
   { to: '/antitarlo', label: 'Antitarlo', icon: ShieldCheck },
   { to: '/statistiche', label: 'Statistiche', icon: BarChart3 },
   { to: '/sito', label: 'Sito', icon: Globe2 },
-  { to: '/altro', label: 'Altro', icon: MoreHorizontal }
+  { to: '/altro', label: 'Impostazioni', icon: Settings }
 ]
 
 const mobileNavigation = navigation.filter((item) => ['/', '/lavori', '/agenda', '/clienti', '/altro'].includes(item.to))
@@ -125,7 +125,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             transition={tapSpring}
             className={({ isActive }) => { const active = isActive || (to === '/altro' && ['/materiali', '/recuperi', '/antitarlo', '/statistiche'].some((path) => location.pathname.startsWith(path))); return `relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[13px] font-semibold ${active ? 'text-brand' : 'text-stone-500'}` }}
           >
-            {({ isActive }) => { const active = isActive || (to === '/altro' && ['/materiali', '/recuperi', '/antitarlo', '/statistiche'].some((path) => location.pathname.startsWith(path))); return <>{active && <motion.span layoutId="mobile-navigation-indicator" transition={reduceMotion ? { duration: 0 } : navIndicatorSpring} className="absolute inset-1 rounded-xl bg-brand-soft" />}<Icon className="relative z-10" size={21} strokeWidth={active ? 2.5 : 2} /><span className="relative z-10">{label}</span></> }}
+            {({ isActive }) => { const active = isActive || (to === '/altro' && ['/materiali', '/recuperi', '/antitarlo', '/statistiche'].some((path) => location.pathname.startsWith(path))); return <>{active && <motion.span layoutId="mobile-navigation-indicator" transition={reduceMotion ? { duration: 0 } : navIndicatorSpring} className="absolute inset-1 rounded-xl bg-brand-soft" />}<Icon className="relative z-10" size={21} strokeWidth={active ? 2.5 : 2} /><span className={`relative z-10 ${label === 'Impostazioni' ? 'whitespace-nowrap text-[11px] tracking-tighter' : ''}`}>{label}</span></> }}
           </MotionNavLink>
         ))}
       </nav>
