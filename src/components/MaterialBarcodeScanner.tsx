@@ -7,9 +7,10 @@ import { readableError, supabase } from '../lib/supabase'
 import type { Material } from '../lib/types'
 import { Button, Field, Input, Modal, Notice } from './ui'
 
-export function MaterialBarcodeScanner({ userId, onFound, onCreate, onClose }: {
+export function MaterialBarcodeScanner({ userId, onFound, onArchived, onCreate, onClose }: {
   userId: string
   onFound: (material: Material) => void
+  onArchived: (material: Material) => void
   onCreate: (barcode: string) => void
   onClose: () => void
 }) {
@@ -22,13 +23,14 @@ export function MaterialBarcodeScanner({ userId, onFound, onCreate, onClose }: {
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [searching, setSearching] = useState(false)
+  const [archived, setArchived] = useState<Material | null>(null)
   const [unknown, setUnknown] = useState<string | null>(null)
   const present = useIsPresent()
 
   async function lookup(value: string) {
     if (busy.current || !supabase) return
     stopCamera.current(); setEnabled(false)
-    setError(''); setUnknown(null)
+    setError(''); setUnknown(null); setArchived(null)
     let barcode: string
     try { barcode = normalizeBarcode(value) } catch (failure) { setError(readableError(failure)); return }
     setCode(barcode)
@@ -39,7 +41,7 @@ export function MaterialBarcodeScanner({ userId, onFound, onCreate, onClose }: {
       if (generation !== requestId.current) return
       if (result.error) throw result.error
       if (!result.data) setUnknown(barcode)
-      else if (!result.data.is_active) setError('Questo codice appartiene a un materiale non attivo. Apri la scheda materiale per verificarlo.')
+      else if (!result.data.is_active) setArchived(result.data as Material)
       else onFound(result.data as Material)
     } catch (failure) {
       if (generation === requestId.current) setError(readableError(failure))
@@ -78,15 +80,16 @@ export function MaterialBarcodeScanner({ userId, onFound, onCreate, onClose }: {
       </div>
       <p aria-live="polite" className="text-sm text-muted">{enabled ? status : searching ? 'Ricerca del materiale…' : 'Fotocamera ferma. Puoi riprendere la scansione o inserire il codice.'}</p>
       <Button type="button" variant="secondary" disabled={searching || enabled} onClick={() => {
-        stopCamera.current(); setError(''); setUnknown(null); setStatus('Avvio della fotocamera…'); setEnabled(true)
+        stopCamera.current(); setError(''); setUnknown(null); setArchived(null); setStatus('Avvio della fotocamera…'); setEnabled(true)
       }}><Camera size={17} /> {enabled ? 'Fotocamera attiva' : 'Riprendi scansione'}</Button>
       <form className="grid gap-3" onSubmit={submit}>
         <Field label="Codice a barre" hint="Puoi anche digitarlo o incollarlo. Gli zeri iniziali vengono conservati.">
-          <Input value={code} maxLength={128} required autoComplete="off" autoCapitalize="off" spellCheck={false} onFocus={() => { stopCamera.current(); setEnabled(false) }} onChange={(event) => { setCode(event.target.value); setUnknown(null) }} />
+          <Input value={code} maxLength={128} required autoComplete="off" autoCapitalize="off" spellCheck={false} onFocus={() => { stopCamera.current(); setEnabled(false) }} onChange={(event) => { setCode(event.target.value); setUnknown(null); setArchived(null) }} />
         </Field>
         <Button type="submit" loading={searching}>Cerca materiale</Button>
       </form>
       {error && <Notice tone="error">{error}</Notice>}
+      {archived && <div className="grid gap-3 rounded-xl border border-line p-4"><p className="break-words text-sm">Il codice appartiene a «{archived.name}», un materiale archiviato. Ripristinalo prima di registrare movimenti.</p><Button onClick={() => { stopCamera.current(); onArchived(archived) }}>Apri scheda e ripristina</Button></div>}
       {unknown && <div className="grid gap-3 rounded-xl border border-line bg-white p-4">
         <p className="break-words text-sm">Nessun materiale associato al codice <strong className="[overflow-wrap:anywhere]">{unknown}</strong>.</p>
         <Button onClick={() => { stopCamera.current(); onCreate(unknown) }}><Plus size={17} /> Registra nuovo materiale</Button>

@@ -13,6 +13,7 @@ export interface MaterialMovementDraft {
 }
 
 export function buildMaterialMovement(draft: MaterialMovementDraft, material: Material, recoveries: RecoveredItem[]) {
+  if (material.is_active === false) throw new Error('Materiale archiviato: ripristinalo in Materiali prima di registrare movimenti o storni.')
   if (draft.material_id !== material.id) throw new Error('Seleziona il materiale da movimentare.')
   const quantity = Number(draft.quantity)
   const cost = Number(draft.unit_cost)

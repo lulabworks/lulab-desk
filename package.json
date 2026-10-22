@@ -17,7 +17,9 @@
     "test:photo-inputs": "node scripts/verify-photo-inputs.mjs",
     "test:barcodes": "node scripts/verify-barcodes.mjs",
     "test:barcodes:postgres": "bash scripts/test-material-barcodes-postgres.sh",
-    "test": "pnpm test:phase3 && pnpm test:site && pnpm test:adaptive && pnpm test:push && pnpm test:mobile-ui && pnpm test:photo-inputs && pnpm test:barcodes"
+    "test:material-lifecycle": "node scripts/verify-material-lifecycle.mjs",
+    "test:material-lifecycle:postgres": "node scripts/test-material-lifecycle-postgres.mjs",
+    "test": "pnpm test:phase3 && pnpm test:site && pnpm test:adaptive && pnpm test:push && pnpm test:mobile-ui && pnpm test:photo-inputs && pnpm test:barcodes && pnpm test:material-lifecycle"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

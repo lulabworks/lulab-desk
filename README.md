@@ -253,3 +253,9 @@ Le modifiche alla scheda commessa vengono accodate e salvate in ordine. Cambiand
 - **GitHub Pages:** pubblicazione del gestionale configurata nel repository dedicato.
 
 Nessuna modifica al database o al repository remoto viene effettuata dalle normali verifiche locali.
+
+## Archiviazione, ripristino ed eliminazione materiali (locale)
+
+La migrazione incrementale `008_material_lifecycle.sql` è stata applicata al progetto Supabase di produzione. La nuova interfaccia permette archiviazione a giacenza zero, ripristino e cancellazione solo senza storico o riferimenti; lo scanner riconosce anche gli archiviati senza creare duplicati. Movimenti e storni su archiviati sono bloccati atomicamente dal database.
+
+La migrazione verifica i dati preesistenti senza correzioni automatiche. Dettagli e prove concorrenti in [MATERIALI-ARCHIVIO.md](docs/MATERIALI-ARCHIVIO.md). Test dedicati: `pnpm test:material-lifecycle` e `pnpm test:material-lifecycle:postgres` (PostgreSQL 17 temporaneo, senza collegamenti Supabase).

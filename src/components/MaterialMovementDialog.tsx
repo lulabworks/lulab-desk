@@ -31,18 +31,15 @@ export function MaterialMovementDialog({ initial, scanned, materials, jobs, reco
     if (!material || pending.current) return
     pending.current = true; setSaving(true); setError('')
     try {
-      if (scanned) {
-        if (!supabase) throw new Error('Supabase non è disponibile.')
-        // Refresh stock before the confirmation. The existing SQL trigger is
-        // still authoritative if another operation changes stock concurrently.
-        const { data, error: fetchError } = await supabase.from('materials').select('*').eq('id', material.id).single()
-        if (fetchError) throw fetchError
-        if (!data.is_active) throw new Error('Questo materiale non è più attivo.')
-        const currentMaterial = data as Material
-        setReview({ material: currentMaterial, movement: buildMaterialMovement(form, currentMaterial, recoveries) })
-      } else {
-        await onSave(buildMaterialMovement(form, material, recoveries).payload)
-      }
+      if (!supabase) throw new Error('Supabase non è disponibile.')
+      // Refresh for both manual and scanned entries; SQL remains authoritative
+      // if archiving or another movement occurs after this read.
+      const { data, error: fetchError } = await supabase.from('materials').select('*').eq('id', material.id).single()
+      if (fetchError) throw fetchError
+      if (!data.is_active) throw new Error('Materiale archiviato: ripristinalo in Materiali prima di registrare movimenti o storni.')
+      const currentMaterial = data as Material
+      if (scanned) setReview({ material: currentMaterial, movement: buildMaterialMovement(form, currentMaterial, recoveries) })
+      else await onSave(buildMaterialMovement(form, currentMaterial, recoveries).payload)
     } catch (failure) { setError(readableError(failure)) }
     finally { pending.current = false; setSaving(false) }
   }
@@ -79,7 +76,7 @@ export function MaterialMovementDialog({ initial, scanned, materials, jobs, reco
       </div> : <Field label="Materiale"><Select required value={form.material_id} onChange={(event) => {
         const selected = materials.find((item) => item.id === event.target.value)
         setForm((current) => ({ ...current, material_id: event.target.value, unit_cost: Number(selected?.unit_price ?? 0), supplier_id: selected?.supplier_id ?? '' }))
-      }}>{materials.map((item) => <option key={item.id} value={item.id}>{item.name} · {Number(item.quantity_available)} {item.unit}</option>)}</Select></Field>}
+      }}>{materials.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.name} · {Number(item.quantity_available)} {item.unit}</option>)}</Select></Field>}
       {scanned ? <>
         <div className="grid grid-cols-2 gap-3"><Button type="button" variant={!outgoing ? 'primary' : 'secondary'} aria-pressed={!outgoing} onClick={() => setType('carico')}><ArrowUp size={17} /> Carico</Button><Button type="button" variant={outgoing ? 'primary' : 'secondary'} aria-pressed={outgoing} onClick={() => setType('scarico')}><ArrowDown size={17} /> Scarico</Button></div>
         {outgoing && <Field label="Collega il consumo (facoltativo)"><Select value={form.movement_type} onChange={(event) => setType(event.target.value as MaterialMovementType)}><option value="scarico">Nessun collegamento</option><option value="consumo_commessa">Commessa</option><option value="consumo_recupero">Recupero</option></Select></Field>}
