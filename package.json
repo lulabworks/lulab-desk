@@ -16,6 +16,7 @@
     "test:adaptive": "node scripts/verify-adaptive.mjs",
     "test:push": "node scripts/verify-push.mjs",
     "test:mobile-ui": "node scripts/verify-mobile-ui.mjs",
+    "test:numeric-inputs": "node scripts/verify-numeric-inputs.mjs",
     "test:photo-inputs": "node scripts/verify-photo-inputs.mjs",
     "test:barcodes": "node scripts/verify-barcodes.mjs",
     "test:barcodes:postgres": "bash scripts/test-material-barcodes-postgres.sh",

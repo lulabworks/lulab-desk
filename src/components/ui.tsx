@@ -2,6 +2,7 @@ import { LoaderCircle, X } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion, type HTMLMotionProps } from 'motion/react'
 import { useEffect, useId, useLayoutEffect, useRef, useState, type InputHTMLAttributes, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
 import { createPortal } from 'react-dom'
+import { NumericInput } from './NumericInput'
 import { sheetSpring, tapSpring } from '../lib/animations'
 import { modalFieldScrollDelta, modalViewportSnapshot, type ModalViewport } from '../lib/modalViewport'
 
@@ -144,6 +145,7 @@ const fieldClass =
   'box-border min-h-11 min-w-0 w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-stone-400 focus:border-brand focus:ring-3 focus:ring-brand/10'
 
 export function Input({ className = '', ...props }: InputHTMLAttributes<HTMLInputElement>) {
+  if (props.type === 'number') return <NumericInput className={`${fieldClass} ${className}`} {...props} />
   return <input className={`${fieldClass} ${className}`} {...props} />
 }
 
