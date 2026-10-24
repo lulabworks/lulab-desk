@@ -28,6 +28,7 @@ import {
 import { readableError, supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { recordSuccessfulOperation } from '../lib/adaptive/usage'
+import { EditorialAssistant } from '../components/EditorialAssistant'
 import {
   SITE_COLLECTION_AVAILABILITIES,
   SITE_PORTFOLIO_IMAGE_KINDS,
@@ -48,6 +49,7 @@ export function SiteContentEditorPage() {
   const [content, setContent] = useState<SiteCollectionItem | SitePortfolioProject | null>(null)
   const [images, setImages] = useState<SiteImage[]>([])
   const [sourceLabel, setSourceLabel] = useState('Scheda indipendente')
+  const [editorialSource, setEditorialSource] = useState<Record<string, string>>({})
   const [uploadKind, setUploadKind] = useState<SitePortfolioImageKind>('durante')
   const [preview, setPreview] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -74,19 +76,26 @@ export function SiteContentEditorPage() {
       return
     }
     setContent(contentResult.data as SiteCollectionItem | SitePortfolioProject)
+    setEditorialSource({})
     setImages(await withSiteImageUrls((imageResult.data ?? []) as SiteImage[]))
 
     if (kind === 'collection') {
       const { data: source } = await supabase.from('site_collection_item_sources').select('recovered_item_id').eq('collection_item_id', id).maybeSingle()
       if (source?.recovered_item_id) {
-        const { data: recovered } = await supabase.from('recovered_items').select('code,name').eq('id', source.recovered_item_id).maybeSingle()
-        if (recovered) setSourceLabel(`${recovered.code} · ${recovered.name}`)
+        const { data: recovered } = await supabase.from('recovered_items').select('code,name,description,initial_condition,required_work').eq('id', source.recovered_item_id).maybeSingle()
+        if (recovered) {
+          setSourceLabel(`${recovered.code} · ${recovered.name}`)
+          setEditorialSource({ item_name: recovered.name, item_description: recovered.description ?? '', initial_condition: recovered.initial_condition ?? '', required_work: recovered.required_work ?? '' })
+        }
       }
     } else {
       const { data: source } = await supabase.from('site_portfolio_project_sources').select('job_id').eq('portfolio_project_id', id).maybeSingle()
       if (source?.job_id) {
-        const { data: job } = await supabase.from('jobs').select('code,title').eq('id', source.job_id).maybeSingle()
-        if (job) setSourceLabel(`${job.code} · ${job.title}`)
+        const { data: job } = await supabase.from('jobs').select('code,title,type,description,technical_details').eq('id', source.job_id).maybeSingle()
+        if (job) {
+          setSourceLabel(`${job.code} · ${job.title}`)
+          setEditorialSource({ job_title: job.title, job_type: job.type, job_description: job.description ?? '', technical_details: job.technical_details ?? '' })
+        }
       }
     }
   }
@@ -249,6 +258,7 @@ export function SiteContentEditorPage() {
   const cover = useMemo(() => images.find((image) => image.is_cover && image.storage_bucket === (content?.publication_status === 'pubblicato' ? 'site-public' : 'site-drafts')) ?? images.find((image) => image.is_cover) ?? images[0], [content?.publication_status, images])
   const hasDraftUpdates = images.some((image) => image.storage_bucket === 'site-drafts')
   const statusMeta = SITE_PUBLICATION_STATUSES.find((item) => item.value === content?.publication_status)
+  const editorialData = useMemo(() => content ? ({ ...content, ...editorialSource }) : {}, [content, editorialSource])
 
   if (unavailable) return <Notice>La migrazione <strong>004_public_site.sql</strong> non è ancora disponibile nel database.</Notice>
   if (!content) return <div>{error ? <Notice tone="error">{error}</Notice> : <div className="h-96 animate-pulse rounded-2xl bg-white" />}</div>
@@ -261,6 +271,10 @@ export function SiteContentEditorPage() {
 
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="grid min-w-0 gap-6">
+        <EditorialAssistant kind={kind} data={editorialData} onApply={(draft, keys) => {
+          const values = Object.fromEntries(keys.map(key => [key, key === 'title' || key.startsWith('seo_') ? (draft as unknown as Record<string,string>)[key] || null : (draft as unknown as Record<string,string>)[key]]))
+          setContent(current => current ? { ...current, ...values } as SiteCollectionItem | SitePortfolioProject : current)
+        }} />
         <Panel><p className="section-kicker">Contenuto pubblico</p><h2 className="type-panel-title">Testi e informazioni</h2><div className="mt-5 grid gap-4">
           <Field label="Titolo"><Input required minLength={2} value={content.title} onChange={(event) => setField('title', event.target.value)} /></Field>
           {kind === 'collection' ? <CollectionFields item={content as SiteCollectionItem} onChange={setField} /> : <ProjectFields item={content as SitePortfolioProject} onChange={setField} />}
