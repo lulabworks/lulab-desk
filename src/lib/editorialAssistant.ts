@@ -4,20 +4,20 @@ export type EditorialDraft = { title: string; description: string; summary?: str
 export function editorialQuestions(kind: EditorialKind, data: Record<string, unknown>) {
   const questions = kind === 'portfolio'
     ? [
-        ['Condizioni iniziali', data.initial_condition, 'Quali erano le condizioni iniziali del manufatto?'],
-        ['Interventi', data.work_done ?? data.required_work, 'Quali interventi sono stati realmente eseguiti?'],
-        ['Materiali e tecniche', data.materials ?? data.technical_details, 'Quali materiali e tecniche sono stati effettivamente utilizzati?'],
-        ['Obiettivo', data.goal, 'Qual era l’obiettivo del lavoro?'],
-        ['Particolarità', data.particularity, 'C’è un dettaglio o una difficoltà particolare da raccontare?']
+        ['Condizioni iniziali', data.initial_condition, 'Quali erano le condizioni iniziali del manufatto?', 'Es. La vernice era rovinata e il legno presentava alcune parti deteriorate.'],
+        ['Interventi eseguiti', data.work_done ?? data.required_work, 'Quali interventi sono stati realmente eseguiti?', 'Es. Ho carteggiato la superficie, riparato le parti danneggiate e applicato una nuova finitura.'],
+        ['Materiali e tecniche', data.materials ?? data.technical_details, 'Quali materiali e tecniche sono stati effettivamente utilizzati?', 'Es. Ho utilizzato carta abrasiva e una vernice trasparente opaca.'],
+        ['Obiettivo del lavoro', data.goal, 'Qual era l’obiettivo del lavoro?', 'Es. Recuperare l’aspetto originale del portone senza modificarne le caratteristiche.'],
+        ['Particolarità o difficoltà', data.particularity, 'C’è un dettaglio o una difficoltà particolare da raccontare?', 'Es. La vecchia vernice era molto indurita e difficile da rimuovere.']
       ]
     : [
-        ['Tipologia', data.category, 'Che tipo di oggetto è?'],
-        ['Materiali e costruzione', data.materials, 'Quali materiali, finiture o caratteristiche costruttive sono verificati?'],
-        ['Aspetto', data.appearance, 'Quali caratteristiche estetiche vuoi mettere in evidenza?'],
-        ['Condizioni e interventi', data.condition_description ?? data.initial_condition, 'Quali sono le condizioni attuali? Sono stati eseguiti interventi?'],
-        ['Particolarità', data.particularity, 'C’è una particolarità documentata da raccontare?']
+        ['Tipologia', data.category, 'Che tipo di oggetto è?', 'Es. Una credenza in legno con due ante e tre cassetti.'],
+        ['Materiali e costruzione', data.materials, 'Quali materiali, finiture o caratteristiche costruttive sono verificati?', 'Es. Struttura in legno massello, maniglie in metallo e finitura scura.'],
+        ['Aspetto estetico', data.appearance, 'Quali caratteristiche estetiche vuoi mettere in evidenza?', 'Es. Ha linee semplici, forme squadrate e una superficie segnata dal tempo.'],
+        ['Condizioni e interventi', data.condition_description ?? data.initial_condition, 'Quali sono le condizioni attuali? Sono stati eseguiti interventi?', "Es. Presenta alcuni graffi superficiali e un'anta è stata riparata."],
+        ['Particolarità', data.particularity, 'C’è una particolarità documentata da raccontare?', 'Es. Conserva ancora le maniglie originali.']
       ]
-  return questions.filter(([,known]) => !String(known ?? '').trim()).map(([label, , question]) => ({ label: String(label), question: String(question) }))
+  return questions.filter(([,known]) => !String(known ?? '').trim()).map(([label, , question, placeholder]) => ({ label: String(label), question: String(question), placeholder: String(placeholder) }))
 }
 
 export function buildEditorialPrompt(kind: EditorialKind, data: Record<string, unknown>, answers: Record<string, string>) {
