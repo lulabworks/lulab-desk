@@ -29,6 +29,7 @@ import { readableError, supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { recordSuccessfulOperation } from '../lib/adaptive/usage'
 import { EditorialAssistant } from '../components/EditorialAssistant'
+import { useSiteSync } from '../lib/siteSync'
 import {
   SITE_COLLECTION_AVAILABILITIES,
   SITE_PORTFOLIO_IMAGE_KINDS,
@@ -43,6 +44,7 @@ import {
 
 export function SiteContentEditorPage() {
   const { user } = useAuth()
+  const siteSync = useSiteSync(user?.id)
   const { id } = useParams()
   const location = useLocation()
   const kind: SiteContentKind = location.pathname.includes('/collezione/') ? 'collection' : 'portfolio'
@@ -144,7 +146,10 @@ export function SiteContentEditorPage() {
       return false
     }
     recordSuccessfulOperation(user?.id, 'site.content_saved')
-    if (showMessage) setMessage('Modifiche salvate.')
+    if (showMessage) {
+      setMessage('Contenuto salvato su Supabase.')
+      if (content.publication_status === 'pubblicato') siteSync.request()
+    }
     return true
   }
 
@@ -181,6 +186,7 @@ export function SiteContentEditorPage() {
     if (updateError) return setError(readableError(updateError))
     recordSuccessfulOperation(user?.id, 'site.image_updated')
     setImages((current) => current.map((item) => item.id === image.id ? { ...item, ...changes } as SiteImage : item))
+    if (image.storage_bucket === 'site-public') siteSync.request()
   }
 
   async function makeCover(image: SiteImage) {
@@ -194,6 +200,7 @@ export function SiteContentEditorPage() {
     recordSuccessfulOperation(user?.id, 'site.image_updated')
     setImages((current) => current.map((item) => item.storage_bucket === image.storage_bucket ? { ...item, is_cover: item.id === image.id } as SiteImage : item))
     setMessage('Copertina aggiornata.')
+    if (image.storage_bucket === 'site-public') siteSync.request()
   }
 
   async function moveImage(image: SiteImage, direction: -1 | 1) {
@@ -211,7 +218,10 @@ export function SiteContentEditorPage() {
     if (updateError) {
       setError(readableError(updateError))
       await load()
-    } else recordSuccessfulOperation(user?.id, 'site.image_reordered')
+    } else {
+      recordSuccessfulOperation(user?.id, 'site.image_reordered')
+      if (reordered.some(item => item.storage_bucket === 'site-public')) siteSync.request()
+    }
   }
 
   async function removeImage(image: SiteImage) {
@@ -223,6 +233,7 @@ export function SiteContentEditorPage() {
       recordSuccessfulOperation(user?.id, 'site.image_deleted')
       setImages((current) => current.filter((item) => item.id !== image.id))
       setMessage('Fotografia eliminata.')
+      if (image.storage_bucket === 'site-public') siteSync.request()
     } catch (removeError) {
       setError(readableError(removeError))
       await load()
@@ -243,9 +254,8 @@ export function SiteContentEditorPage() {
     try {
       await changeSitePublication({ kind, parentId: content.id, images, nextStatus: next })
       recordSuccessfulOperation(user?.id, next === 'pubblicato' ? 'site.published' : 'site.withdrawn')
-      setMessage(next === 'pubblicato'
-        ? 'Pubblicato su Supabase. Il sito pubblico si aggiornerà automaticamente entro pochi minuti.'
-        : 'Ritirato da Supabase. Il sito pubblico si aggiornerà automaticamente entro pochi minuti.')
+      setMessage(next === 'pubblicato' ? 'Contenuto pubblicato su Supabase.' : 'Contenuto ritirato da Supabase.')
+      siteSync.request()
       await load()
     } catch (publicationError) {
       setError(readableError(publicationError))
@@ -267,6 +277,7 @@ export function SiteContentEditorPage() {
     <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><Link to="/sito" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand"><ArrowLeft size={18} /> Torna a Sito</Link><div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => setPreview(true)}><Eye size={17} /> Anteprima</Button><Button onClick={() => void persistContent()} loading={saving}><Save size={17} /> Salva</Button></div></div>
     {error && <div className="mb-5"><Notice tone="error">{error}</Notice></div>}
     {message && <div className="mb-5"><Notice tone="success">{message}</Notice></div>}
+    {siteSync.status !== 'idle' && <div className="mb-5"><Notice tone={siteSync.status === 'error' ? 'error' : 'success'}>{siteSync.status === 'requested' ? 'Aggiornamento del sito richiesto. Il deployment deve ancora completarsi.' : siteSync.status === 'error' ? 'Impossibile richiedere l’aggiornamento del sito. I dati salvati su Supabase sono conservati.' : 'Richiesta di aggiornamento del sito in preparazione…'}</Notice>{siteSync.status === 'error' && <Button className="mt-2" variant="secondary" onClick={() => void siteSync.retry()}>Riprova aggiornamento sito</Button>}</div>}
     <header className="mb-6"><div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-[13px] font-medium ${statusMeta?.tone}`}>{statusMeta?.label}</span>{content.is_featured && <span className="inline-flex items-center gap-1 text-[13px] font-medium text-brand"><Sparkles size={14} /> Homepage</span>}</div><h1 className="mt-3 break-words type-page-title">{content.title}</h1><p className="mt-2 text-sm text-muted">Origine: {sourceLabel}</p></header>
 
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">

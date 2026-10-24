@@ -11,6 +11,7 @@
     "typecheck": "tsc -b --pretty false",
     "test:quote-surface": "node scripts/verify-quote-surface.mjs",
     "test:editorial-assistant": "node scripts/verify-editorial-assistant.mjs",
+    "test:site-sync": "node scripts/verify-site-sync.mjs",
     "test:quote-surface:postgres": "node scripts/test-quote-surface-postgres.mjs",
     "test:phase3": "node scripts/verify-phase3.mjs",
     "test:site": "node scripts/verify-site.mjs",
