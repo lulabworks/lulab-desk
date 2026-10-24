@@ -1,4 +1,5 @@
 import type { QuoteItem } from './types'
+import { quoteItemAmount, roundMoney } from './quoteSurface'
 
 export function isPhase2Unavailable(error: unknown) {
   if (!error || typeof error !== 'object') return false
@@ -8,18 +9,20 @@ export function isPhase2Unavailable(error: unknown) {
 }
 
 export function calculateQuoteTotals(
-  items: Array<Pick<QuoteItem, 'quantity' | 'unit_price'>>,
+  items: Array<Pick<QuoteItem, 'quantity' | 'unit_price'> & Partial<QuoteItem>>,
   laborHours: number,
   hourlyRate: number,
   transportCost: number,
   otherCosts: number,
   marginPercent: number
 ) {
-  const materials = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0)
+  const materials = items.filter(item => item.item_kind !== 'service').reduce((sum, item) => sum + quoteItemAmount(item), 0)
+  const services = items.filter(item => item.item_kind === 'service').reduce((sum, item) => sum + quoteItemAmount(item), 0)
+  const round = items.some(item => item.calculation_mode === 'surface' || item.item_kind === 'service') ? roundMoney : (value: number) => value
   const labor = Number(laborHours || 0) * Number(hourlyRate || 0)
-  const subtotal = materials + labor + Number(transportCost || 0) + Number(otherCosts || 0)
-  const marginAmount = subtotal * (Number(marginPercent || 0) / 100)
-  return { materials, labor, subtotal, marginAmount, total: subtotal + marginAmount }
+  const subtotal = round(materials + services + labor + Number(transportCost || 0) + Number(otherCosts || 0))
+  const marginAmount = round(subtotal * (Number(marginPercent || 0) / 100))
+  return { materials, services, labor, subtotal, marginAmount, total: round(subtotal + marginAmount) }
 }
 
 export function minutesLabel(minutes: number) {

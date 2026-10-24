@@ -9,6 +9,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --pretty false",
+    "test:quote-surface": "node scripts/verify-quote-surface.mjs",
+    "test:quote-surface:postgres": "node scripts/test-quote-surface-postgres.mjs",
     "test:phase3": "node scripts/verify-phase3.mjs",
     "test:site": "node scripts/verify-site.mjs",
     "test:adaptive": "node scripts/verify-adaptive.mjs",
@@ -19,7 +21,7 @@
     "test:barcodes:postgres": "bash scripts/test-material-barcodes-postgres.sh",
     "test:material-lifecycle": "node scripts/verify-material-lifecycle.mjs",
     "test:material-lifecycle:postgres": "node scripts/test-material-lifecycle-postgres.mjs",
-    "test": "pnpm test:phase3 && pnpm test:site && pnpm test:adaptive && pnpm test:push && pnpm test:mobile-ui && pnpm test:photo-inputs && pnpm test:barcodes && pnpm test:material-lifecycle"
+    "test": "pnpm test:phase3 && pnpm test:site && pnpm test:adaptive && pnpm test:push && pnpm test:mobile-ui && pnpm test:photo-inputs && pnpm test:barcodes && pnpm test:material-lifecycle && pnpm test:quote-surface"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

@@ -109,6 +109,13 @@ export interface Quote {
 }
 
 export interface QuoteItem {
+  calculation_mode?: 'manual' | 'surface'
+  item_kind?: 'material' | 'service'
+  width_cm?: number | null
+  height_cm?: number | null
+  element_count?: number | null
+  faces?: number | null
+  labor_included?: boolean
   id: string
   user_id: string
   quote_id: string

@@ -254,6 +254,10 @@ Le modifiche alla scheda commessa vengono accodate e salvate in ordine. Cambiand
 
 Nessuna modifica al database o al repository remoto viene effettuata dalle normali verifiche locali.
 
+## Preventivi a superficie
+
+La migrazione incrementale 009 è applicata al progetto Supabase di produzione. L'interfaccia locale aggiunge misure in cm e tariffe al m², mantenendo compatibili i preventivi esistenti. Dettagli e verifiche in [PREVENTIVI-SUPERFICIE.md](docs/PREVENTIVI-SUPERFICIE.md).
+
 ## Archiviazione, ripristino ed eliminazione materiali (locale)
 
 La migrazione incrementale `008_material_lifecycle.sql` è stata applicata al progetto Supabase di produzione. La nuova interfaccia permette archiviazione a giacenza zero, ripristino e cancellazione solo senza storico o riferimenti; lo scanner riconosce anche gli archiviati senza creare duplicati. Movimenti e storni su archiviati sono bloccati atomicamente dal database.

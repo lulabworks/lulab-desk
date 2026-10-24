@@ -1,5 +1,6 @@
 import type { Customer, Job, Quote, QuoteItem } from './types'
 import { calculateQuoteTotals } from './phase2'
+import { quoteItemAmount, surfaceCaption, surfaceQuantity } from './quoteSurface'
 import { BRAND } from './brand'
 
 const euro = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' })
@@ -101,12 +102,12 @@ export async function generateQuotePdf({
   if (customer?.phone) doc.text(customer.phone, right - 5, y + 13, { align: 'right' })
   y += 31
 
-  const widths = [92, 18, 21, 28]
+  const widths = [79, 34, 27, 28]
   doc.setFillColor(31, 73, 56)
   doc.rect(left, y, right - left, 8, 'F')
   doc.setTextColor(255, 255, 255)
   doc.setFont('helvetica', 'bold')
-  doc.text('Materiale / voce', left + 3, y + 5.3)
+  doc.text('Descrizione', left + 3, y + 5.3)
   doc.text('Qtà', left + widths[0] + 3, y + 5.3)
   doc.text('Unitario', left + widths[0] + widths[1] + 3, y + 5.3)
   doc.text('Totale', right - 3, y + 5.3, { align: 'right' })
@@ -115,25 +116,26 @@ export async function generateQuotePdf({
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(32, 36, 31)
   for (const item of items) {
-    const lines = doc.splitTextToSize(item.description, widths[0] - 6) as string[]
+    const lines = doc.splitTextToSize([item.description, surfaceCaption(item)].filter(Boolean).join('\n'), widths[0] - 6) as string[]
     const rowHeight = Math.max(8, lines.length * 4.2 + 3)
     ensureSpace(rowHeight + 5)
     doc.setDrawColor(231, 229, 223)
     doc.line(left, y + rowHeight, right, y + rowHeight)
     doc.text(lines, left + 3, y + 5)
-    doc.text(`${Number(item.quantity)} ${item.unit}`, left + widths[0] + 3, y + 5)
-    doc.text(euro.format(Number(item.unit_price)), left + widths[0] + widths[1] + 3, y + 5)
-    doc.text(euro.format(Number(item.quantity) * Number(item.unit_price)), right - 3, y + 5, { align: 'right' })
+    doc.text(`${item.calculation_mode === 'surface' ? surfaceQuantity(item) : Number(item.quantity)} ${item.unit}`, left + widths[0] + 3, y + 5)
+    doc.text(`${euro.format(Number(item.unit_price))}${item.calculation_mode === 'surface' ? ' /m²' : ''}`, left + widths[0] + widths[1] + 3, y + 5)
+    doc.text(euro.format(quoteItemAmount(item)), right - 3, y + 5, { align: 'right' })
     y += rowHeight
   }
 
   const totals = calculateQuoteTotals(items, quote.labor_hours, quote.hourly_rate, quote.transport_cost, quote.other_costs, quote.margin_percent)
-  ensureSpace(54)
+  ensureSpace(62)
   y += 6
   const labelX = right - 70
   const rows: Array<[string, number, boolean?]> = [
     ['Materiali', totals.materials],
-    [`Manodopera (${Number(quote.labor_hours)} h × ${euro.format(Number(quote.hourly_rate))})`, totals.labor],
+    ['Prestazioni', totals.services],
+    [`Ore aggiuntive (${Number(quote.labor_hours)} h × ${euro.format(Number(quote.hourly_rate))})`, totals.labor],
     ['Trasporto', Number(quote.transport_cost)],
     ['Altre spese', Number(quote.other_costs)],
     [`Margine (${Number(quote.margin_percent)}%)`, totals.marginAmount]
