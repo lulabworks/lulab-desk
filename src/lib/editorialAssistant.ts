@@ -30,12 +30,60 @@ export function buildEditorialPrompt(kind: EditorialKind, data: Record<string, u
 
 export function chatGptPromptUrl(prompt: string) { return `https://chatgpt.com/?prompt=${encodeURIComponent(prompt)}` }
 
+export function editorialCorrectionPrompt(kind: EditorialKind, reason: string) {
+  const schema = kind === 'portfolio'
+    ? '{"title":"","summary":"","description":"","seo_title":"","seo_description":""}'
+    : '{"title":"","description":"","seo_title":"","seo_description":""}'
+  return `La risposta precedente non è stato possibile importarla: ${reason}\nRestituisci di nuovo SOLO un oggetto JSON valido, senza Markdown o testo prima/dopo. Tutti i valori devono essere stringhe. Mantieni i fatti e il significato dei testi, non inventare informazioni. Schema richiesto:\n${schema}`
+}
+
+function extractObject(text: string) {
+  let start = -1, depth = 0, quoted = false, curlyQuoted = false, escaped = false
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]
+    if (start < 0) { if (c === '{') { start = i; depth = 1 }; continue }
+    if (quoted) {
+      if (escaped) escaped = false
+      else if (c === '\\' && !curlyQuoted) escaped = true
+      else if ((curlyQuoted && c === '”') || (!curlyQuoted && c === '"')) quoted = false
+      continue
+    }
+    if (c === '"' || c === '“') { quoted = true; curlyQuoted = c === '“'; continue }
+    if (c === '{') depth++
+    if (c === '}' && --depth === 0) return text.slice(start, i + 1)
+  }
+  return ''
+}
+
+/** Repairs only JSON delimiters and raw line breaks; quoted prose is preserved verbatim. */
+function repairJson(source: string) {
+  let output = '', inString = false, curlyString = false, escaped = false
+  for (let index = 0; index < source.length; index++) {
+    const c = source[index]
+    if (inString) {
+      if (escaped) { output += c; escaped = false; continue }
+      if (c === '\\' && !curlyString) { output += c; escaped = true; continue }
+      if ((curlyString && c === '”') || (!curlyString && c === '"')) { output += '"'; inString = false; curlyString = false; continue }
+      if (c === '\r' || c === '\n') { if (c === '\r' && source[index + 1] === '\n') index++; output += '\\n'; continue }
+      output += c; continue
+    }
+    if (c === '“') { output += '"'; inString = true; curlyString = true; continue }
+    if (c === '”' || c === '„') { output += '"'; inString = true; curlyString = c === '„'; continue }
+    if (c === '"') { output += c; inString = true; continue }
+    output += c
+  }
+  return output
+}
+
 export function parseEditorialResponse(text: string, kind: EditorialKind): EditorialDraft {
-  const unwrapped = text.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim()
-  const start = unwrapped.indexOf('{'), end = unwrapped.lastIndexOf('}')
-  if (start < 0 || end < start) throw new Error('Non trovo un oggetto JSON nella risposta. Incolla il JSON completo ricevuto da ChatGPT.')
+  const unwrapped = text.replace(/^\uFEFF/, '').trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/i,'').trim()
+  const object = extractObject(unwrapped)
+  if (!object) throw new Error('Non trovo un oggetto JSON completo. Chiedi a ChatGPT di restituire solo il JSON indicato.')
   let value: unknown
-  try { value = JSON.parse(unwrapped.slice(start,end+1)) } catch { throw new Error('Il JSON non è valido. Correggilo oppure chiedi a ChatGPT di restituire solo il formato JSON indicato.') }
+  try { value = JSON.parse(object) } catch {
+    try { value = JSON.parse(repairJson(object)) }
+    catch { throw new Error('La struttura JSON non è recuperabile in modo sicuro. Chiedi a ChatGPT di restituire solo il JSON indicato, con virgolette doppie e una chiave per riga.') }
+  }
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('La risposta deve essere un oggetto JSON con campi testuali.')
   const record = value as Record<string,unknown>
   const required = kind === 'portfolio' ? ['title','summary','description','seo_title','seo_description'] : ['title','description','seo_title','seo_description']
