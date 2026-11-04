@@ -1,6 +1,6 @@
 # Modalità assistenza Adaptive
 
-In Impostazioni, l'interruttore **Modalità assistenza** esclude le nuove visite e operazioni del browser dalla telemetria. Inizialmente è disattivato. Non cambia identità, permessi, raccolta globale su Supabase o dati operativi.
+In Impostazioni, la sezione **Strumenti tecnici e assistenza**, inizialmente chiusa, contiene l'interruttore **Escludi questo dispositivo dalle statistiche**. È riservato a test, verifiche e assistenza tecnica e deve restare disattivato durante il normale lavoro quotidiano. L'attivazione richiede una conferma esplicita; la disattivazione è immediata. Lo stato di esclusione resta visibile nel riepilogo anche a sezione chiusa. Le statistiche consistono in contatori aggregati, non nei contenuti delle commesse o dei clienti. Il valore predefinito resta disattivato. Non cambia identità, permessi, raccolta globale su Supabase o dati operativi.
 
 La preferenza `lulab-adaptive-assistance:v1` è salvata e riletta da localStorage e non contiene identificativi account. Persiste al riavvio e attraverso logout/login, anche con un diverso account: riguarda quel browser. Schede dello stesso profilo/origine condividono la preferenza; dispositivi e profili separati sono indipendenti. Una PWA usa la memoria assegnatale dal browser/OS: se condivide lo storage con il browser, condivide anche questa preferenza. Non è possibile garantire la separazione fra due contesti che il sistema operativo tratta come la stessa memoria. La cancellazione dei dati del sito ripristina il default.
 
