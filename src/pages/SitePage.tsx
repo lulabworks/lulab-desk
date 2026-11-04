@@ -17,7 +17,8 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button, EmptyState, Field, Input, Modal, ModalPresence, Notice, PageHeader, Panel, Select, Textarea } from '../components/ui'
 import { formatDate } from '../lib/format'
-import { isPublicSiteUnavailable, makeSiteSlug, withSiteImageUrls } from '../lib/site'
+import { importProjectJobPhotos, isPublicSiteUnavailable, makeSiteSlug, withSiteImageUrls } from '../lib/site'
+import { photoImportMessage } from '../lib/projectPhotoImport'
 import { readableError, supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { recordSuccessfulOperation } from '../lib/adaptive/usage'
@@ -202,9 +203,14 @@ export function SitePage() {
           return setError(readableError(sourceError))
         }
       }
+      let photoMessage = ''
+      if (source) {
+        try { photoMessage = photoImportMessage(await importProjectJobPhotos(data.id)) }
+        catch (error) { photoMessage = `Bozza creata. Importazione foto non completata: ${readableError(error)}. Puoi riprovare dall’editor.` }
+      }
       recordSuccessfulOperation(user?.id, 'site.content_created')
       setCreateKind(null)
-      navigate(`/sito/progetti/${data.id}`)
+      navigate(`/sito/progetti/${data.id}`, { state: { photoMessage } })
     }
     setSaving(false)
   }

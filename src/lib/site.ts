@@ -1,5 +1,7 @@
 import { readableError, supabase } from './supabase'
 import { getSupportedPhotoMimeType } from './photoUpload'
+import { importedPhotoId, isJobPhoto, type PhotoImportReport } from './projectPhotoImport'
+import type { JobFile } from './types'
 import type {
   SiteCollectionImage,
   SitePortfolioImage,
@@ -117,7 +119,8 @@ export async function uploadSiteImages({
   altText,
   portfolioKind = 'durante',
   startOrder,
-  setFirstAsCover
+  setFirstAsCover,
+  imageIds
 }: {
   kind: SiteContentKind
   parentId: string
@@ -126,6 +129,7 @@ export async function uploadSiteImages({
   portfolioKind?: SitePortfolioImageKind
   startOrder: number
   setFirstAsCover: boolean
+  imageIds?: string[]
 }) {
   if (!supabase) throw new Error('Supabase non è configurato.')
   const inserted: SiteImage[] = []
@@ -140,6 +144,7 @@ export async function uploadSiteImages({
     if (uploadError) throw new Error(readableError(uploadError))
 
     const payload = {
+      ...(imageIds?.[index] ? { id: imageIds[index] } : {}),
       [parentColumn(kind)]: parentId,
       storage_bucket: 'site-drafts',
       storage_path: path,
@@ -155,12 +160,67 @@ export async function uploadSiteImages({
     }
     const { data, error: metadataError } = await supabase.from(imageTable(kind)).insert(payload).select().single()
     if (metadataError) {
+      if (imageIds?.[index]) {
+        const { data: committed, error: readError } = await supabase.from(imageTable(kind)).select('*').eq('id', imageIds[index]).maybeSingle()
+        // A lost response must never delete an object whose metadata was committed.
+        if (committed?.storage_path === path) { inserted.push(committed as SiteImage); continue }
+        if (readError) throw new Error('Impossibile verificare il salvataggio della copia privata. Riprova l’importazione; nessun originale è stato modificato.')
+      }
       await supabase.storage.from('site-drafts').remove([path])
       throw new Error(readableError(metadataError))
     }
     inserted.push(data as SiteImage)
   }
   return withSiteImageUrls(inserted)
+}
+
+/** Downloads only through the signed-in user's RLS; never moves operational files. */
+export async function importProjectJobPhotos(projectId: string): Promise<PhotoImportReport> {
+  if (!supabase) throw new Error('Supabase non è configurato.')
+  const client = supabase
+  const report: PhotoImportReport = { imported: 0, skipped: 0, failures: [] }
+  const { data: source, error: sourceError } = await client.from('site_portfolio_project_sources').select('job_id').eq('portfolio_project_id', projectId).maybeSingle()
+  if (sourceError) throw new Error(readableError(sourceError))
+  if (!source?.job_id) throw new Error('Questo progetto non è collegato a una commessa.')
+  const { data: files, error: fileError } = await client.from('job_files').select('*').eq('job_id', source.job_id).order('created_at').order('id')
+  if (fileError) throw new Error(readableError(fileError))
+  const { data: current, error: imageError } = await client.from('site_portfolio_images').select('*').eq('portfolio_project_id', projectId)
+  if (imageError) throw new Error(readableError(imageError))
+  const existing = (current ?? []) as SitePortfolioImage[]
+  const knownIds = new Set(existing.map(image => image.id))
+  let order = Math.max(-1, ...existing.map(image => image.sort_order)) + 1
+  let firstImportedId: string | undefined
+  for (const file of ((files ?? []) as JobFile[]).filter(isJobPhoto)) {
+    const id = await importedPhotoId(projectId, file.id)
+    if (knownIds.has(id)) { report.skipped++; continue }
+    try {
+      if (file.size_bytes > MAX_SOURCE_SIZE) throw new Error('Fotografia oltre il limite di 25 MB.')
+      const { data: blob, error } = await client.storage.from('job-files').download(file.storage_path)
+      if (error || !blob) throw new Error(error ? readableError(error) : 'Fotografia non accessibile.')
+      // Do not copy filenames, notes or other potentially private operational metadata.
+      const photo = new File([blob], `fotografia.${file.mime_type.split('/')[1]}`, { type: file.mime_type })
+      await uploadSiteImages({ kind: 'portfolio', parentId: projectId, files: [photo], altText: 'Fotografia del progetto LuLab', portfolioKind: file.category, startOrder: order++, setFirstAsCover: false, imageIds: [id] })
+      knownIds.add(id)
+      firstImportedId ??= id
+      report.imported++
+    } catch (error) {
+      // Another tab may have inserted this same identity. Its private/public copy wins;
+      // uploadSiteImages removes only the random storage path owned by this attempt.
+      const { data: duplicate } = await client.from('site_portfolio_images').select('id').eq('id', id).maybeSingle()
+      if (duplicate) report.skipped++
+      else report.failures.push(`Foto ${file.category} (${report.imported + report.skipped + report.failures.length + 1}): ${readableError(error)}`)
+    }
+  }
+  // Only an initially empty gallery receives an automatic cover. Existing choices stay intact.
+  if (existing.length === 0 && firstImportedId) {
+    const { data: covers, error: coverReadError } = await client.from('site_portfolio_images').select('id').eq('portfolio_project_id', projectId).eq('is_cover', true)
+    if (coverReadError) report.failures.push('Impossibile verificare la copertina: sceglila nella galleria.')
+    else if (!covers?.length) {
+      const { error } = await client.from('site_portfolio_images').update({ is_cover: true }).eq('id', firstImportedId)
+      if (error && error.code !== '23505') report.failures.push('Foto importate: scegli la copertina nella galleria.')
+    }
+  }
+  return report
 }
 
 async function moveImage(kind: SiteContentKind, image: SiteImage, targetBucket: 'site-drafts' | 'site-public') {

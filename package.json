@@ -15,6 +15,7 @@
     "test:quote-surface:postgres": "node scripts/test-quote-surface-postgres.mjs",
     "test:phase3": "node scripts/verify-phase3.mjs",
     "test:site": "node scripts/verify-site.mjs",
+    "test:project-photo-import": "node scripts/verify-project-photo-import.mjs",
     "test:adaptive": "node scripts/verify-adaptive.mjs",
     "test:push": "node scripts/verify-push.mjs",
     "test:mobile-ui": "node scripts/verify-mobile-ui.mjs",

@@ -19,6 +19,7 @@ import { Button, EmptyState, Field, Input, Modal, ModalPresence, Notice, Panel, 
 import {
   changeSitePublication,
   deleteSiteImage,
+  importProjectJobPhotos,
   isPublicSiteUnavailable,
   uploadSiteImages,
   withSiteImageUrls,
@@ -26,6 +27,7 @@ import {
   type SiteImage
 } from '../lib/site'
 import { readableError, supabase } from '../lib/supabase'
+import { photoImportMessage } from '../lib/projectPhotoImport'
 import { useAuth } from '../contexts/AuthContext'
 import { recordSuccessfulOperation } from '../lib/adaptive/usage'
 import { EditorialAssistant } from '../components/EditorialAssistant'
@@ -51,13 +53,14 @@ export function SiteContentEditorPage() {
   const [content, setContent] = useState<SiteCollectionItem | SitePortfolioProject | null>(null)
   const [images, setImages] = useState<SiteImage[]>([])
   const [sourceLabel, setSourceLabel] = useState('Scheda indipendente')
+  const [hasJobSource, setHasJobSource] = useState(false)
   const [editorialSource, setEditorialSource] = useState<Record<string, string>>({})
   const [uploadKind, setUploadKind] = useState<SitePortfolioImageKind>('durante')
   const [preview, setPreview] = useState(false)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState<string>(location.state?.photoMessage ?? '')
   const [unavailable, setUnavailable] = useState(false)
 
   const table = kind === 'collection' ? 'site_collection_items' : 'site_portfolio_projects'
@@ -79,6 +82,7 @@ export function SiteContentEditorPage() {
     }
     setContent(contentResult.data as SiteCollectionItem | SitePortfolioProject)
     setEditorialSource({})
+    setHasJobSource(false)
     setImages(await withSiteImageUrls((imageResult.data ?? []) as SiteImage[]))
 
     if (kind === 'collection') {
@@ -93,6 +97,7 @@ export function SiteContentEditorPage() {
     } else {
       const { data: source } = await supabase.from('site_portfolio_project_sources').select('job_id').eq('portfolio_project_id', id).maybeSingle()
       if (source?.job_id) {
+        setHasJobSource(true)
         const { data: job } = await supabase.from('jobs').select('code,title,type,description,technical_details').eq('id', source.job_id).maybeSingle()
         if (job) {
           setSourceLabel(`${job.code} · ${job.title}`)
@@ -176,6 +181,24 @@ export function SiteContentEditorPage() {
     } catch (uploadError) {
       setError(readableError(uploadError))
     } finally {
+      setUploading(false)
+    }
+  }
+
+  async function importJobPhotos() {
+    if (!supabase || !content || uploading) return
+    setUploading(true)
+    setError('')
+    setMessage('')
+    try {
+      const result = await importProjectJobPhotos(content.id)
+      setMessage(photoImportMessage(result))
+    } catch (error) { setError(readableError(error)) }
+    finally {
+      // Refresh only media, preserving unsaved editorial text.
+      const { data, error } = await supabase.from('site_portfolio_images').select('*').eq('portfolio_project_id', content.id).order('sort_order').order('created_at')
+      if (!error) setImages(await withSiteImageUrls((data ?? []) as SiteImage[]))
+      else setError(readableError(error))
       setUploading(false)
     }
   }
@@ -294,6 +317,7 @@ export function SiteContentEditorPage() {
         </div></Panel>
 
         <Panel><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><p className="section-kicker">Galleria</p><h2 className="type-panel-title">Fotografie</h2></div><div className="flex flex-wrap gap-2">{kind === 'portfolio' && <Select className="w-auto" value={uploadKind} onChange={(event) => setUploadKind(event.target.value as SitePortfolioImageKind)}>{SITE_PORTFOLIO_IMAGE_KINDS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</Select>}<label className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-[15px] font-semibold text-white ${uploading ? 'pointer-events-none opacity-55' : ''}`}><ImagePlus size={17} /> {uploading ? 'Preparazione…' : 'Aggiungi foto'}<input className="sr-only" type="file" multiple accept="image/*" onChange={(event) => void upload(event)} /></label></div></div>
+          {kind === 'portfolio' && hasJobSource && <div className="mb-4 grid gap-2"><Button variant="secondary" disabled={uploading || saving} onClick={() => void importJobPhotos()}><ImagePlus size={17} />{uploading ? 'Importazione in corso…' : 'Importa foto dalla commessa'}</Button><p className="text-sm leading-5 text-muted">Aggiunge solo le foto mancanti come copie private. Ordine, copertina e originali restano invariati.</p></div>}
           <p className="mb-5 text-sm leading-6 text-muted">Le immagini vengono ridimensionate e ottimizzate in WebP, o in JPEG se il browser non supporta WebP. Finché la scheda non viene pubblicata restano nel deposito privato.</p>
           {images.length === 0 ? <EmptyState icon={<Camera size={22} />} title="Nessuna fotografia" description="Aggiungi le fotografie selezionate per il sito. Gli originali operativi restano separati e privati." /> : <div className="grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">{images.map((image, index) => <PhotoCard key={image.id} image={image} kind={kind} first={index === 0} last={index === images.length - 1} onMove={moveImage} onCover={makeCover} onUpdate={updateImage} onRemove={removeImage} />)}</div>}
         </Panel>
