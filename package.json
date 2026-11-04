@@ -22,6 +22,7 @@
     "test:adaptive-assistance": "node scripts/verify-adaptive-assistance.mjs",
     "test:push": "node scripts/verify-push.mjs",
     "test:push-diagnostics": "node scripts/verify-push-diagnostics.mjs",
+    "test:push-reliability:postgres": "node scripts/test-push-reliability-postgres.mjs",
     "test:mobile-ui": "node scripts/verify-mobile-ui.mjs",
     "test:numeric-inputs": "node scripts/verify-numeric-inputs.mjs",
     "test:photo-inputs": "node scripts/verify-photo-inputs.mjs",

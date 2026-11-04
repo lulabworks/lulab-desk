@@ -36,6 +36,7 @@ export function diagnosticRecord(error: unknown, fallback: Context, operation = 
     'PGRST204': 'Colonna non trovata nella cache dello schema.',
     'PGRST205': 'Tabella non trovata nella cache dello schema.',
     '57014': 'Operazione database annullata o scaduta.', '40P01': 'Deadlock database.',
+    '55000': 'Lease push scaduta o acquisita da un altro worker.',
     '42702': 'Riferimento SQL ambiguo.', 'P0001': 'Eccezione esplicita sollevata da una funzione o trigger SQL.'
   }
   const message = code && messages[code] ? messages[code]

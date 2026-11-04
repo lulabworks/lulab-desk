@@ -1,5 +1,7 @@
 # Diagnostica locale del dispatch push
 
+Questo documento descrive l'intervento diagnostico iniziale. La causa successivamente accertata (GRANT SELECT mancante su push_notification_preferences) e il nuovo budget/recupero preparato nella migrazione 010 sono documentati in [AFFIDABILITA-PUSH.md](AFFIDABILITA-PUSH.md). Le descrizioni del vecchio claim e delle sue limitazioni qui sotto sono conservate come analisi dell'incidente.
+
 ## Risultati certi dell'ispezione
 
 - Gli errori Supabase/PostgREST vengono spesso restituiti come oggetti con `code`, `message`, `details`, `hint`. Il vecchio catch riconosceva soltanto `instanceof Error`, producendo `unknown error` per questi oggetti. La nuova diagnostica gestisce entrambi i casi e anche errori di trasporto lanciati durante una query.

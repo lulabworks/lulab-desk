@@ -57,7 +57,7 @@ assert.match(inquiry, /Nuova richiesta dal sito/)
 assert.match(inquiry, /push non è critica/i)
 
 assert.match(dispatch, /enqueue_due_push_reminders/)
-assert.match(dispatch, /claim_push_notification_jobs/)
+assert.match(dispatch, /claim_push_notification_job_v2/)
 assert.match(dispatch, /site_editors/)
 assert.match(dispatch, /is_push_notification_job_valid/)
 assert.match(dispatch, /status === 404 \|\| status === 410/)
