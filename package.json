@@ -19,6 +19,7 @@
     "test:site-project-deletion": "node scripts/verify-site-project-deletion.mjs",
     "test:site-categories": "node scripts/verify-site-categories.mjs",
     "test:adaptive": "node scripts/verify-adaptive.mjs",
+    "test:adaptive-assistance": "node scripts/verify-adaptive-assistance.mjs",
     "test:push": "node scripts/verify-push.mjs",
     "test:mobile-ui": "node scripts/verify-mobile-ui.mjs",
     "test:numeric-inputs": "node scripts/verify-numeric-inputs.mjs",

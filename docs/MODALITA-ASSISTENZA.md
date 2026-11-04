@@ -1,0 +1,15 @@
+# Modalità assistenza Adaptive
+
+In Impostazioni, l'interruttore **Modalità assistenza** esclude le nuove visite e operazioni del browser dalla telemetria. Inizialmente è disattivato. Non cambia identità, permessi, raccolta globale su Supabase o dati operativi.
+
+La preferenza `lulab-adaptive-assistance:v1` è salvata e riletta da localStorage e non contiene identificativi account. Persiste al riavvio e attraverso logout/login, anche con un diverso account: riguarda quel browser. Schede dello stesso profilo/origine condividono la preferenza; dispositivi e profili separati sono indipendenti. Una PWA usa la memoria assegnatale dal browser/OS: se condivide lo storage con il browser, condivide anche questa preferenza. Non è possibile garantire la separazione fra due contesti che il sistema operativo tratta come la stessa memoria. La cancellazione dei dati del sito ripristina il default.
+
+Il controllo avviene nelle funzioni pubbliche di registrazione prima del deduplicatore visite e prima di accodare gli eventi. Il batcher ricontrolla anche dentro l'aggiornamento della coda, coprendo scritture in attesa. Gli eventi non ancora accodati quando la modalità diventa attiva vengono esclusi. Gli eventi già accodati vengono conservati con gli stessi UUID e continuano l'invio normale, nel rispetto dell'isolamento account già esistente. Non vengono cancellate statistiche remote. Alla disattivazione vengono raccolte solo le attività successive, senza ricostruire quelle escluse.
+
+La UI ascolta storage/pageshow per riallinearsi alle altre schede e al ripristino della PWA. Ogni registrazione rilegge la preferenza prima di accodare anche se l'evento storage non è ancora arrivato. La verifica al momento della scrittura non è un lock distribuito: tra schede, un evento già in fase di accodamento può completarsi a ridosso dell'attivazione.
+
+Una lettura locale impossibile o un valore malformato sospendono prudenzialmente le nuove registrazioni. Una scrittura fallita o non verificabile mostra un errore e non viene dichiarata salvata. Il toggle riflette l'ultimo valore effettivamente leggibile, non un successo ottimistico. La memoria privata o le limitazioni di iOS possono impedire la persistenza; l'interfaccia segnala gli errori osservabili, ma non può garantire che l'OS non elimini lo storage dopo la chiusura.
+
+## Verifiche
+
+`pnpm test:adaptive-assistance` controlla la preferenza e il batcher reale con memoria simulata: default, blocco e ripresa, riavvio, separazione dispositivi/profili, schede sullo stesso storage, errori di memoria e scrittura, conservazione/invio dei batch precedenti, attivazione durante una scrittura in attesa. Non usa Supabase e non modifica dati reali. Per Safari/PWA iPhone resta utile verificare la persistenza sul dispositivo reale dopo una chiusura completa.

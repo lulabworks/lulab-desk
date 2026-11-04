@@ -108,7 +108,7 @@ export function createUsageBatcher(
   send: UsageBatchSender,
   retryBaseMs = 2_000,
   retryMaxMs = 60_000,
-  options: { store?: UsageQueueStore; createId?: () => string; now?: () => Date; debounceMs?: number; canSend?: (userId: string) => Promise<boolean> } = {}
+  options: { store?: UsageQueueStore; createId?: () => string; now?: () => Date; debounceMs?: number; canSend?: (userId: string) => Promise<boolean>; canRecord?: () => boolean } = {}
 ) {
   const store = options.store ?? createIndexedDbStore() ?? createLockedLocalStorageStore() ?? createMemoryStore()
   const createId = options.createId ?? uuid
@@ -127,10 +127,11 @@ export function createUsageBatcher(
   }
 
   async function record(userId: string, featureKey: string, occurredAt = now().toISOString()) {
-    if (disposed) return
+    if (disposed || options.canRecord?.() === false) return
     const timestamp = new Date(occurredAt)
     if (!Number.isFinite(timestamp.getTime())) return
     await store.update(userId, (queue) => {
+      if (options.canRecord?.() === false) return queue
       if (!queue.open) queue.open = { batch_id: createId(), events: [] }
       const day = timestamp.toISOString().slice(0, 10)
       const existing = queue.open.events.find((event) => event.feature_key === featureKey && event.occurred_at.slice(0, 10) === day)

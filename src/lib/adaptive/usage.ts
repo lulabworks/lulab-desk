@@ -3,6 +3,7 @@ import { createUsageBatcher } from './batch'
 import { USAGE_FEATURES, type UsageFeatureKey } from './catalog'
 import { createSectionVisitDeduper } from './visits'
 import { supabase } from '../supabase'
+import { assistancePreference } from './assistance'
 
 const enabled = import.meta.env.PROD
 const visitDeduper = createSectionVisitDeduper<UsageFeatureKey>()
@@ -45,7 +46,7 @@ const batcher = createUsageBatcher(async (userId, batch) => {
   } finally {
     authWatch.data.subscription.unsubscribe()
   }
-}, 2_000, 60_000, { canSend: isActiveAccount })
+}, 2_000, 60_000, { canSend: isActiveAccount, canRecord: assistancePreference.canRecord })
 
 async function flushCurrentAccount() {
   if (!supabase) return
@@ -59,11 +60,13 @@ async function flushCurrentAccount() {
 }
 
 export function recordSuccessfulOperation(userId: string | undefined, featureKey: UsageFeatureKey) {
+  if (!assistancePreference.canRecord()) return
   if (!enabled || !userId || !supabase || USAGE_FEATURES[featureKey].type !== 'operation') return
   void batcher.record(userId, featureKey).catch(() => undefined)
 }
 
 export function recordSectionVisit(userId: string | undefined, featureKey: UsageFeatureKey | null, navigationKey: string) {
+  if (!assistancePreference.canRecord()) return
   if (!enabled || !userId || !supabase || !featureKey || USAGE_FEATURES[featureKey].type !== 'section_visit') return
   if (!visitDeduper.shouldRecord(userId, featureKey, navigationKey)) return
   void batcher.record(userId, featureKey).catch(() => undefined)

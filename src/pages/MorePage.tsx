@@ -7,6 +7,7 @@ import { isPublicSiteUnavailable } from '../lib/site'
 import { useAuth } from '../contexts/AuthContext'
 import { recordSuccessfulOperation } from '../lib/adaptive/usage'
 import { PushNotificationSettings } from '../components/PushNotificationSettings'
+import { AdaptiveAssistanceSettings } from '../components/AdaptiveAssistanceSettings'
 
 export function MorePage() {
   const { user } = useAuth()
@@ -92,6 +93,7 @@ export function MorePage() {
         </Panel>
       </div>
       <div className="mt-6"><PushNotificationSettings /></div>
+      <div className="mt-6"><AdaptiveAssistanceSettings /></div>
       <footer className="mt-10 pb-2 text-center text-xs leading-5 text-muted">
         <p className="font-medium text-ink">LuLab Desk</p>
         <p>Versione {__APP_VERSION__} · Build {__APP_BUILD__}</p>
