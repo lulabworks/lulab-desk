@@ -32,6 +32,7 @@ import { deleteSiteProject } from '../lib/siteProjectDeletion'
 import { useAuth } from '../contexts/AuthContext'
 import { recordSuccessfulOperation } from '../lib/adaptive/usage'
 import { EditorialAssistant } from '../components/EditorialAssistant'
+import { ProjectCategorySelect } from '../components/ProjectCategorySelect'
 import { useSiteSync } from '../lib/siteSync'
 import {
   SITE_COLLECTION_AVAILABILITIES,
@@ -119,6 +120,10 @@ export function SiteContentEditorPage() {
 
   async function persistContent(showMessage = true) {
     if (!supabase || !content) return false
+    if (kind === 'portfolio' && !(content as SitePortfolioProject).category.trim()) {
+      setError('Seleziona una categoria per il progetto.')
+      return false
+    }
     setSaving(true)
     setError('')
     const payload = kind === 'collection'
@@ -141,7 +146,7 @@ export function SiteContentEditorPage() {
           title: content.title.trim(),
           summary: (content as SitePortfolioProject).summary.trim(),
           description: (content as SitePortfolioProject).description.trim(),
-          category: (content as SitePortfolioProject).category.trim(),
+          category: (content as SitePortfolioProject).category,
           is_featured: content.is_featured,
           featured_order: content.is_featured ? Number(content.featured_order ?? 0) : null,
           sort_order: Number(content.sort_order),
@@ -359,7 +364,7 @@ function CollectionFields({ item, onChange }: { item: SiteCollectionItem; onChan
 }
 
 function ProjectFields({ item, onChange }: { item: SitePortfolioProject; onChange: (key: string, value: unknown) => void }) {
-  return <><div className="grid gap-4 sm:grid-cols-2"><Field label="Categoria"><Input required minLength={2} value={item.category} onChange={(event) => onChange('category', event.target.value)} /></Field><Field label="Sommario"><Input required value={item.summary} onChange={(event) => onChange('summary', event.target.value)} /></Field></div><Field label="Descrizione dell’intervento"><Textarea required value={item.description} onChange={(event) => onChange('description', event.target.value)} /></Field></>
+  return <><div className="grid gap-4 sm:grid-cols-2"><Field label="Categoria"><ProjectCategorySelect value={item.category} onChange={value => onChange('category', value)} /></Field><Field label="Sommario"><Input required value={item.summary} onChange={(event) => onChange('summary', event.target.value)} /></Field></div><Field label="Descrizione dell’intervento"><Textarea required value={item.description} onChange={(event) => onChange('description', event.target.value)} /></Field></>
 }
 
 function PhotoCard({ image, kind, first, last, onMove, onCover, onUpdate, onRemove }: {

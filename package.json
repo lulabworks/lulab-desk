@@ -17,6 +17,7 @@
     "test:site": "node scripts/verify-site.mjs",
     "test:project-photo-import": "node scripts/verify-project-photo-import.mjs",
     "test:site-project-deletion": "node scripts/verify-site-project-deletion.mjs",
+    "test:site-categories": "node scripts/verify-site-categories.mjs",
     "test:adaptive": "node scripts/verify-adaptive.mjs",
     "test:push": "node scripts/verify-push.mjs",
     "test:mobile-ui": "node scripts/verify-mobile-ui.mjs",

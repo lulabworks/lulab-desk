@@ -19,6 +19,8 @@ import { Button, EmptyState, Field, Input, Modal, ModalPresence, Notice, PageHea
 import { formatDate } from '../lib/format'
 import { importProjectJobPhotos, isPublicSiteUnavailable, makeSiteSlug, withSiteImageUrls } from '../lib/site'
 import { photoImportMessage } from '../lib/projectPhotoImport'
+import { projectCategoryFromJob, SITE_PROJECT_CATEGORIES } from '../lib/siteCategories'
+import { ProjectCategorySelect } from '../components/ProjectCategorySelect'
 import { useSiteSync } from '../lib/siteSync'
 import { readableError, supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -64,7 +66,7 @@ export function SitePage() {
   const [usedJobIds, setUsedJobIds] = useState<Set<string>>(new Set())
   const [query, setQuery] = useState('')
   const [createKind, setCreateKind] = useState<CreateKind | null>(null)
-  const [createForm, setCreateForm] = useState({ source_id: '', title: '', description: '', category: 'Restauro' })
+  const [createForm, setCreateForm] = useState({ source_id: '', title: '', description: '', category: '' })
   const [selectedInquiry, setSelectedInquiry] = useState<CustomerInquiry | null>(null)
   const [inquiryFiles, setInquiryFiles] = useState<CustomerInquiryFile[]>([])
   const [saving, setSaving] = useState(false)
@@ -137,7 +139,7 @@ export function SitePage() {
   const filteredInquiries = useMemo(() => inquiries.filter((item) => `${item.reference_code} ${item.customer_name} ${item.email ?? ''} ${item.phone ?? ''} ${item.message}`.toLocaleLowerCase('it').includes(query.toLocaleLowerCase('it'))), [inquiries, query])
 
   function openCreate(kind: CreateKind) {
-    setCreateForm({ source_id: '', title: '', description: '', category: 'Restauro' })
+    setCreateForm({ source_id: '', title: '', description: '', category: '' })
     setCreateKind(kind)
   }
 
@@ -148,13 +150,14 @@ export function SitePage() {
       setCreateForm((current) => ({ ...current, source_id: sourceId, title: source?.name ?? current.title, description: source?.description ?? current.description }))
     } else {
       const source = jobs.find((item) => item.id === sourceId)
-      setCreateForm((current) => ({ ...current, source_id: sourceId, title: source?.title ?? current.title, description: source?.description ?? current.description }))
+      setCreateForm((current) => ({ ...current, source_id: sourceId, title: source?.title ?? current.title, description: source?.description ?? current.description, category: source ? projectCategoryFromJob(source.type) : '' }))
     }
   }
 
   async function createContent(event: FormEvent) {
     event.preventDefault()
     if (!supabase || !createKind) return
+    if (createKind === 'projects' && !SITE_PROJECT_CATEGORIES.includes(createForm.category)) return setError('Seleziona una categoria per il progetto.')
     setSaving(true)
     setError('')
     const title = createForm.title.trim()
@@ -192,7 +195,7 @@ export function SitePage() {
         title,
         summary: description.slice(0, 1000),
         description,
-        category: createForm.category.trim() || 'Restauro'
+        category: createForm.category
       }).select().single()
       if (insertError) {
         setSaving(false)
@@ -267,7 +270,7 @@ export function SitePage() {
     <ModalPresence>{createKind && <Modal title={createKind === 'collection' ? 'Nuovo oggetto della Collezione' : 'Nuovo progetto'} onClose={() => setCreateKind(null)}><form className="grid gap-4" onSubmit={createContent}>
       <Field label={createKind === 'collection' ? 'Parti da un recupero (facoltativo)' : 'Parti da una commessa (facoltativo)'}><Select value={createForm.source_id} onChange={(event) => chooseSource(event.target.value)}><option value="">Crea una scheda indipendente</option>{createKind === 'collection' ? recoveries.filter((item) => !usedRecoveryIds.has(item.id)).map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>) : jobs.filter((item) => !usedJobIds.has(item.id)).map((item) => <option key={item.id} value={item.id}>{item.code} · {item.title}</option>)}</Select></Field>
       <Field label="Titolo"><Input required minLength={2} value={createForm.title} onChange={(event) => setCreateForm((current) => ({ ...current, title: event.target.value }))} /></Field>
-      {createKind === 'projects' && <Field label="Categoria"><Input required minLength={2} value={createForm.category} onChange={(event) => setCreateForm((current) => ({ ...current, category: event.target.value }))} placeholder="Es. Restauro mobili" /></Field>}
+      {createKind === 'projects' && <Field label="Categoria"><ProjectCategorySelect value={createForm.category} onChange={category => setCreateForm(current => ({ ...current, category }))} /></Field>}
       <Field label="Descrizione iniziale" hint="Potrai completarla nella scheda successiva."><Textarea value={createForm.description} onChange={(event) => setCreateForm((current) => ({ ...current, description: event.target.value }))} /></Field>
       <Notice>La nuova scheda nasce come bozza e non è visibile sul sito.</Notice>
       <Button type="submit" loading={saving}>Crea e continua</Button>
