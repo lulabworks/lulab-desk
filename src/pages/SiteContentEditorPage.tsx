@@ -14,7 +14,7 @@ import {
   Undo2
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button, EmptyState, Field, Input, Modal, ModalPresence, Notice, Panel, Select, Textarea } from '../components/ui'
 import {
   changeSitePublication,
@@ -28,6 +28,7 @@ import {
 } from '../lib/site'
 import { readableError, supabase } from '../lib/supabase'
 import { photoImportMessage } from '../lib/projectPhotoImport'
+import { deleteSiteProject } from '../lib/siteProjectDeletion'
 import { useAuth } from '../contexts/AuthContext'
 import { recordSuccessfulOperation } from '../lib/adaptive/usage'
 import { EditorialAssistant } from '../components/EditorialAssistant'
@@ -49,6 +50,9 @@ export function SiteContentEditorPage() {
   const siteSync = useSiteSync(user?.id)
   const { id } = useParams()
   const location = useLocation()
+  const navigate = useNavigate()
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const kind: SiteContentKind = location.pathname.includes('/collezione/') ? 'collection' : 'portfolio'
   const [content, setContent] = useState<SiteCollectionItem | SitePortfolioProject | null>(null)
   const [images, setImages] = useState<SiteImage[]>([])
@@ -288,6 +292,21 @@ export function SiteContentEditorPage() {
     }
   }
 
+  async function removeProject() {
+    if (!content || kind !== 'portfolio' || saving || uploading || deleting) return
+    setDeleting(true)
+    setError('')
+    setMessage('')
+    try {
+      await deleteSiteProject(content.id, siteSync.request)
+      navigate('/sito?area=projects', { replace: true, state: { deletionMessage: 'Progetto e fotografie eliminati definitivamente.' } })
+    } catch (error) {
+      setConfirmDelete(false)
+      await load()
+      setError(`Eliminazione non completata: ${readableError(error)} Alcune copie potrebbero essere già state rimosse. Puoi riprovare.`)
+    } finally { setDeleting(false) }
+  }
+
   const cover = useMemo(() => images.find((image) => image.is_cover && image.storage_bucket === (content?.publication_status === 'pubblicato' ? 'site-public' : 'site-drafts')) ?? images.find((image) => image.is_cover) ?? images[0], [content?.publication_status, images])
   const hasDraftUpdates = images.some((image) => image.storage_bucket === 'site-drafts')
   const statusMeta = SITE_PUBLICATION_STATUSES.find((item) => item.value === content?.publication_status)
@@ -296,7 +315,7 @@ export function SiteContentEditorPage() {
   if (unavailable) return <Notice>La migrazione <strong>004_public_site.sql</strong> non è ancora disponibile nel database.</Notice>
   if (!content) return <div>{error ? <Notice tone="error">{error}</Notice> : <div className="h-96 animate-pulse rounded-2xl bg-white" />}</div>
 
-  return <div>
+  return <div><fieldset disabled={deleting} className="m-0 min-w-0 border-0 p-0">
     <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><Link to="/sito" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand"><ArrowLeft size={18} /> Torna a Sito</Link><div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => setPreview(true)}><Eye size={17} /> Anteprima</Button><Button onClick={() => void persistContent()} loading={saving}><Save size={17} /> Salva</Button></div></div>
     {error && <div className="mb-5"><Notice tone="error">{error}</Notice></div>}
     {message && <div className="mb-5"><Notice tone="success">{message}</Notice></div>}
@@ -329,6 +348,9 @@ export function SiteContentEditorPage() {
     </div>
 
     <ModalPresence>{preview && <Modal title="Anteprima della scheda" onClose={() => setPreview(false)}><article className="overflow-hidden rounded-2xl border border-line bg-white">{cover?.display_url ? <img src={cover.display_url} alt={cover.alt_text} className="aspect-[16/10] w-full object-cover" /> : <div className="grid aspect-[16/10] place-items-center bg-stone-100 text-stone-300"><FileImage size={42} /></div>}<div className="p-5"><p className="section-kicker">{kind === 'collection' ? 'Collezione LuLab' : (content as SitePortfolioProject).category}</p><h2 className="type-panel-title">{content.title}</h2><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-muted">{kind === 'collection' ? (content as SiteCollectionItem).description : (content as SitePortfolioProject).summary}</p>{kind === 'collection' && <p className="mt-4 text-sm font-semibold text-brand">{SITE_COLLECTION_AVAILABILITIES.find((item) => item.value === (content as SiteCollectionItem).availability)?.label}</p>}</div></article><Notice>Anteprima interna: nessun dato privato o prezzo viene mostrato.</Notice></Modal>}</ModalPresence>
+    </fieldset>
+    {kind === 'portfolio' && <section className="mt-8 border-t border-red-200 pt-6"><h2 className="type-card-title">Eliminazione definitiva</h2><p className="my-3 text-sm leading-6 text-muted">Rimuove questo progetto e le sue copie fotografiche. La commessa e i suoi file rimangono conservati. Operazione riservata agli owner editoriali.</p><Button variant="danger" disabled={saving || uploading || deleting} onClick={() => setConfirmDelete(true)}><Trash2 size={17} />Elimina progetto</Button></section>}
+    <ModalPresence>{confirmDelete && <Modal title="Elimina progetto" onClose={() => { if (!deleting) setConfirmDelete(false) }}><div className="grid gap-4"><p className="break-words leading-6">Eliminare definitivamente il progetto <strong>«{content.title}»</strong> e tutte le sue fotografie?</p><Notice tone="error">L’operazione è definitiva e non può essere annullata. Il progetto verrà rimosso anche dal sito pubblico al prossimo aggiornamento. La commessa originale, le sue foto e i suoi documenti non verranno eliminati.</Notice><div className="flex flex-wrap justify-end gap-3"><Button variant="secondary" disabled={deleting} onClick={() => setConfirmDelete(false)}>Annulla</Button><Button variant="danger" loading={deleting} onClick={() => void removeProject()}><Trash2 size={17} />Elimina definitivamente</Button></div>{deleting && <p role="status" className="text-sm text-muted">Eliminazione in corso. Attendi il completamento.</p>}</div></Modal>}</ModalPresence>
   </div>
 }
 

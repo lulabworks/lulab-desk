@@ -14,11 +14,12 @@ import {
   Sparkles
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button, EmptyState, Field, Input, Modal, ModalPresence, Notice, PageHeader, Panel, Select, Textarea } from '../components/ui'
 import { formatDate } from '../lib/format'
 import { importProjectJobPhotos, isPublicSiteUnavailable, makeSiteSlug, withSiteImageUrls } from '../lib/site'
 import { photoImportMessage } from '../lib/projectPhotoImport'
+import { useSiteSync } from '../lib/siteSync'
 import { readableError, supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { recordSuccessfulOperation } from '../lib/adaptive/usage'
@@ -48,8 +49,10 @@ const areaOptions: Array<{ value: Area; label: string; icon: typeof PackageOpen 
 export function SitePage() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const siteSync = useSiteSync(user?.id)
   const [searchParams, setSearchParams] = useSearchParams()
-  const [area, setArea] = useState<Area>('collection')
+  const [area, setArea] = useState<Area>(() => searchParams.get('area') === 'projects' ? 'projects' : 'collection')
   const [collection, setCollection] = useState<SiteCollectionItem[]>([])
   const [projects, setProjects] = useState<SitePortfolioProject[]>([])
   const [collectionImages, setCollectionImages] = useState<SiteCollectionImage[]>([])
@@ -69,7 +72,7 @@ export function SitePage() {
   const [editor, setEditor] = useState(false)
   const [unavailable, setUnavailable] = useState(false)
   const [error, setError] = useState('')
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState<string>(location.state?.deletionMessage ?? '')
 
   async function load() {
     if (!supabase) return
@@ -252,6 +255,7 @@ export function SitePage() {
     {!unavailable && !loading && !editor && <Notice tone="error">Il tuo account non è autorizzato a gestire i contenuti del sito.</Notice>}
     {error && <div className="mb-5"><Notice tone="error">{error}</Notice></div>}
     {message && <div className="mb-5"><Notice tone="success">{message}</Notice></div>}
+    {siteSync.status !== 'idle' && <div className="mb-5"><Notice tone={siteSync.status === 'error' ? 'error' : 'success'}>{siteSync.status === 'requested' ? 'Aggiornamento del sito richiesto. Il deployment deve ancora completarsi.' : siteSync.status === 'error' ? 'Impossibile richiedere l’aggiornamento del sito.' : 'Richiesta di aggiornamento del sito in preparazione…'}</Notice>{siteSync.status === 'error' && <Button className="mt-2" variant="secondary" onClick={() => void siteSync.retry()}>Riprova aggiornamento sito</Button>}</div>}
     {!unavailable && editor && <>
       <div className="mb-5 flex min-w-0 max-w-full gap-2 overflow-x-auto pb-1">
         {areaOptions.map(({ value, label, icon: Icon }) => <button key={value} onClick={() => { setArea(value); setQuery('') }} className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-semibold ${area === value ? 'bg-brand text-white' : 'border border-line bg-white text-muted hover:text-ink'}`}><Icon size={17} /> {label}{value === 'inquiries' && inquiries.filter((item) => item.status === 'nuova').length > 0 && <span className="rounded-full bg-accent px-1.5 text-xs text-ink">{inquiries.filter((item) => item.status === 'nuova').length}</span>}</button>)}
